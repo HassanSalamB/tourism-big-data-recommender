@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER=${DB_USER}        
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: pgadmin_ui
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL} 
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD} 
+  #   ports:
+  #     - "5050:80"  # You will access it at http://localhost:8080
+  #   depends_on:
+  #     - postgres
+
+  adminer:
+    image: adminer
+    container_name: adminer_ui
+    restart: always
+    ports:
+      - "5050:8080"
+    depends_on:
+      - postgres
+
+  etl_worker:
+    build: .
+    container_name: etl_worker
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./config.yaml:/app/config.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+
+volumes:
+  pg_data:
+
+
+  

@@ -1,0 +1,22 @@
+# --- API CONFIGURATION ---
+api:
+  # The specific DATAtourisme feed URL
+  feed_url: "https://diffuseur.datatourisme.fr/webservice/"
+
+# --- DATABASE CONFIGURATION ---
+database:
+  host: "postgres"         # This matches the service name in docker-compose
+  db_name: "holiday_db"
+  # Note: Password stays in .env!
+  
+  # ETL Logic settings
+  batch_size: 1000
+  bronze_table: "raw_api_data"
+  silver_table: "normalized_pois"
+  gold_table: "processed_pois"
+
+# --- STORAGE PATHS ---
+paths:
+  # These paths are relative to the /app folder inside Docker
+  raw_data_dir: "data/raw"
+  output_file: "datatourisme_cache.json"

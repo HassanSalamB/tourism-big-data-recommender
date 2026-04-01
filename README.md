@@ -1,53 +1,47 @@
-Project Name
-==============================
+# 🌍 Holiday Itinerary Data Platform
+**Project:** feb26_bde_int_holiday
 
-This project is a starting Pack for MLOps projects based on the subject "movie_recommandation". It's not perfect so feel free to make some modifications on it.
 
-Project Organization
+**Version:** 1.0.0
+
+### The objective of the project is to create an application that proposes an itinerary according to certain criteria. The user of the application chooses areas / points of interest to visit during his next trip, as well as the duration of the stay and the app proposes a detailed itinerary optimizing his travel and stay time.
+---
+
+## 🏗️ System Architecture
+![Project Architecture](./reports/figures/architecture.png)
+
+## 📂 Project Structure
+* **data/raw:** Objects, Context, and Index JSON files.
+* **docker-compose.yml:** Orchestrates PostgreSQL and Neo4j.
+* **src/ingestion:** Python scripts to load JSON into Postgres.
+* **src/transformation:** Logic to extract POIs and map relationships.
+
+## 🚀 Getting Started
+1. Run `docker-compose up -d` to start databases.
+2. Run `python src/extract_api.py` to ingest files.
+
+Project Organization 
 ------------
+```my_data_project/
+├── .env                  # 🔒 Private: API tokens & DB passwords (GIT IGNORED)
+├── .gitignore            #  Shield: Prevents .env and /data/ from going to GitHub
+├── config.yaml           #  Control Panel: API URLs, table names, batch sizes
+├── docker-compose.yml    #  Infrastructure: Spins up Postgres, Neo4j, & Python
+├── Dockerfile            #  Recipe: Instructions to build your Python environment
+├── requirements.txt      #  Ingredients: List of libraries (requests, PyYAML, etc.)
+├── references/           # 📚 DOCUMENTATION
+│   ├── .gitkeep          # Keeps empty folder in Git
+│   └── architecture.mmd  # Mermaid diagram source (Edit this)
+├── reports/              # 📊 OUTPUTS & FIGURES
+│   └── figures/
+│       ├── .gitkeep
+│       └── architecture.png # The exported image of your pipeline
+├── data/                 # 💾 STORAGE: Where actual files live (GIT IGNORED)
+│   ├── raw/              #   - Bronze: Original JSONs from DATAtourisme
+│   └── processed/        #   - Silver/Gold: Cleaned CSVs or Parquet files
+│
+└── src/                  
+    └── ingestion/         #   - Folder for "Extracting" data
+        └── extract_api.py #  - The script that calls the API & saves to /data
+```
 
-    ├── LICENSE
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── logs               <- Logs from training and predicting
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   ├── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │   │   └── visualize.py
-    │   └── config         <- Describe the parameters used in train_model.py and predict_model.py
-
---------
-
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
