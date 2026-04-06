@@ -1,0 +1,17 @@
+{
+    "name": "ETL Worker",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "etl_worker",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-azuretools.vscode-docker",
+                "GitHub.copilot",
+                "GitHub.copilot-chat"
+            ]
+        }
+    }
+}

@@ -94,3 +94,5 @@ raw
 
 # venv
 .venv
+uv.lock
+pyproject.toml

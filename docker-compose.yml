@@ -47,6 +47,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    tty: true
+    stdin_open: true
+    environment:
+      - PYTHONUNBUFFERED=1
 
 
 

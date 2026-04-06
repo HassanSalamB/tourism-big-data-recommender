@@ -2,12 +2,6 @@
 api:
   # The specific DATAtourisme feed URL
   feed_url: "https://diffuseur.datatourisme.fr/webservice/"
-
-# --- DATABASE CONFIGURATION ---
-database:
-  host: "postgres"         # This matches the service name in docker-compose
-  db_name: "holiday_db"
-  # Note: Password stays in .env!
   
   # ETL Logic settings
   batch_size: 1000

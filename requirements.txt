@@ -1,5 +1,13 @@
-requests
+# Spark & Data Processing
+pyspark==3.5.0
+
+# Database Connectivity
 psycopg2-binary
-PyYAML
+
+# Config & Environment
+pyyaml
 python-dotenv
+
+# API & Streaming
+requests
 ijson
