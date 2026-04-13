@@ -1,2 +1,46 @@
-# ignore raw data folder
+# VCS / editor / OS
+.git
+.gitignore
+.DS_Store
+.idea/
+.vscode/
+
+# Python cache / virtual env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Local secrets
+.env
+
+# Large data and generated artifacts
+data/
 raw_data/
+logs/
+tmp/
+temp/
+*.zip
+*.rar
+*.7z
+*.parquet
+*.feather
+*.csv
+*.tsv
+*.sqlite
+*.db
+
+# Notebooks / reports artifacts
+.ipynb_checkpoints/
+notebooks/
+reports/
+
+# Build outputs
+dist/
+build/

@@ -1,0 +1,59 @@
+flowchart LR
+    API["DATAtourisme ZIP Feed"]
+    CATALOG["Catalog Freshness Probe<br/>(optional)"]
+    ZIP["Local ZIP Cache<br/>data/raw/datatourisme_download.zip"]
+
+    subgraph BRONZE["Bronze Layer: Raw Source Of Truth"]
+        BINGEST["src/bronze/api_ingest.py"]
+        BRAW[("PostgreSQL<br/>bronze_raw_poi<br/>raw_payload JSONB + content_hash")]
+        BSTATE[("PostgreSQL<br/>bronze_feed_state")]
+    end
+
+    subgraph SILVER["Silver Layer: Cleaned And Normalized"]
+        SNORM["src/silver/data_normalizer.py<br/>pandas chunk cleaning"]
+        SPLACES[("PostgreSQL<br/>silver_places")]
+        SCAT[("PostgreSQL<br/>silver_categories")]
+        SPLACECAT[("PostgreSQL<br/>silver_place_categories")]
+        STIME[("PostgreSQL<br/>silver_timings")]
+        SPRICE[("PostgreSQL<br/>silver_prices")]
+        SSTATE[("PostgreSQL<br/>silver_pipeline_state")]
+        SPARQUET["Parquet Snapshot<br/>data/silver/parquet/places.parquet"]
+    end
+
+    subgraph GOLDPG["Gold Layer: Postgres Serving"]
+        GPG["src/gold/postgres_warehouse.py<br/>H3 clusters + scoring"]
+        GCLUSTERS[("PostgreSQL<br/>gold_clusters")]
+    end
+
+    subgraph GOLDNEO["Gold Layer: Neo4j Graph"]
+        GNEO["src/gold/neo4j_graph_loader.py"]
+        NEO[("Neo4j<br/>POI, City, Category graph")]
+    end
+
+    CATALOG -->|unchanged: skip ZIP when available| BINGEST
+    API -->|download when needed| BINGEST
+    BINGEST --> ZIP
+    ZIP -->|stream objects/*.json| BINGEST
+    BINGEST -->|upsert new/changed raw POIs| BRAW
+    BINGEST -->|save freshness signature| BSTATE
+
+    BRAW -->|SQL hash comparison<br/>content_hash vs source_content_hash| SNORM
+    SNORM -->|clean id/name/lat/lon/text| SPLACES
+    SNORM -->|explode unique @type values| SCAT
+    SNORM --> SPLACECAT
+    SNORM -->|parse dates/times| STIME
+    SNORM -->|parse numeric prices| SPRICE
+    SNORM -->|watermark metadata| SSTATE
+    SNORM --> SPARQUET
+
+    SPLACES -->|cleaned POI feed| GPG
+    SCAT --> GPG
+    SPLACECAT --> GPG
+    GPG --> GCLUSTERS
+    GPG -->|updates gold_pg_synced_at| SPLACES
+
+    SPLACES -->|changed rows only| GNEO
+    SCAT --> GNEO
+    SPLACECAT --> GNEO
+    GNEO --> NEO
+    GNEO -->|updates neo4j_synced_at| SPLACES

@@ -2,10 +2,17 @@
 api:
   # The specific DATAtourisme feed URL
   feed_url: "https://diffuseur.datatourisme.fr/webservice/"
+  catalog_url: "https://api.datatourisme.fr/v1/catalog"
+  catalog_fields: "uuid,lastUpdateDatatourisme"
+  catalog_sort: "lastUpdateDatatourisme[desc]"
+  catalog_page_size: 1
+  download_retries: 3
+  download_wait_seconds: 10
+  download_chunk_mb: 1
+  progress_log_seconds: 5
   
   # ETL Logic settings
   batch_size: 1000
-  bronze_table: "raw_api_data"
   silver_table: "normalized_pois"
   gold_table: "processed_pois"
 
@@ -13,4 +20,75 @@ api:
 paths:
   # These paths are relative to the /app folder inside Docker
   raw_data_dir: "data/raw"
-  output_file: "datatourisme_cache.json"
+  zip_output_file: "datatourisme_download.zip"
+
+# --- Silver outputs ---
+db_paths:
+  parquet_output: "data/silver/parquet/places.parquet"
+
+# --- Silver extraction rules ---
+# These mappings keep DATAtourisme JSON paths outside Python code. The first path
+# that returns a value wins, and text values use preferred_langs as fallback order.
+silver_extraction:
+  # Text dictionaries can contain several languages. Silver tries French first
+  # because this dataset is French, then falls back to English when French is missing.
+  preferred_langs: ["fr", "en"]
+
+  # Flat silver column name -> possible DATAtourisme JSON paths.
+  # Example: silver `description` first checks `hasDescription.0.dc:description`;
+  # if that is empty, it tries shortDescription, then comments.
+  text_field_paths:
+    source_identifier:
+      - "dc:identifier"
+    name:
+      - "rdfs:label"
+    description:
+      - "hasDescription.0.dc:description"
+      - "hasDescription.0.shortDescription"
+      - "hasDescription.0.rdfs:comment"
+      - "rdfs:comment"
+    address:
+      - "isLocatedAt.0.schema:address.0.schema:streetAddress"
+      - "isLocatedAt.0.schema:address.schema:streetAddress"
+    postal_code:
+      - "isLocatedAt.0.schema:address.0.schema:postalCode"
+      - "isLocatedAt.0.schema:address.schema:postalCode"
+    city:
+      - "isLocatedAt.0.schema:address.0.hasAddressCity.rdfs:label"
+      - "isLocatedAt.0.schema:address.hasAddressCity.rdfs:label"
+      - "isLocatedAt.0.schema:address.0.schema:addressLocality"
+      - "isLocatedAt.0.schema:address.schema:addressLocality"
+    region:
+      - "isLocatedAt.0.schema:address.0.hasAddressCity.isPartOfDepartment.isPartOfRegion.rdfs:label"
+      - "isLocatedAt.0.schema:address.hasAddressCity.isPartOfDepartment.isPartOfRegion.rdfs:label"
+    country:
+      - "isLocatedAt.0.schema:address.0.schema:addressCountry"
+      - "isLocatedAt.0.schema:address.schema:addressCountry"
+      - "isLocatedAt.0.schema:address.0.hasAddressCity.isPartOfDepartment.isPartOfRegion.isPartOfCountry.rdfs:label"
+      - "isLocatedAt.0.schema:address.hasAddressCity.isPartOfDepartment.isPartOfRegion.isPartOfCountry.rdfs:label"
+    contact_email:
+      - "hasContact.0.schema:email"
+      - "hasContact.schema:email"
+      - "hasBeenPublishedBy.0.schema:email"
+      - "hasBeenPublishedBy.schema:email"
+      - "hasBeenCreatedBy.schema:email"
+    contact_phone:
+      - "hasContact.0.schema:telephone"
+      - "hasContact.schema:telephone"
+      - "hasBeenPublishedBy.0.schema:telephone"
+      - "hasBeenPublishedBy.schema:telephone"
+      - "hasBeenCreatedBy.schema:telephone"
+    website:
+      - "hasContact.0.foaf:homepage"
+      - "hasContact.foaf:homepage"
+      - "hasBeenPublishedBy.0.foaf:homepage"
+      - "hasBeenPublishedBy.foaf:homepage"
+      - "hasBeenCreatedBy.foaf:homepage"
+
+  # Numeric fields are also configured here, but pandas performs the actual type
+  # conversion in the silver layer with `pd.to_numeric`.
+  numeric_field_paths:
+    lat:
+      - "isLocatedAt.0.schema:geo.schema:latitude"
+    lon:
+      - "isLocatedAt.0.schema:geo.schema:longitude"

@@ -1,6 +1,3 @@
-# Spark & Data Processing
-pyspark==3.5.0
-
 # Database Connectivity
 psycopg2-binary
 
@@ -11,3 +8,12 @@ python-dotenv
 # API & Streaming
 requests
 ijson
+
+# Team 1 (Huzaifa): silver parquet, gold H3, bronze archives
+pandas
+pyarrow
+h3
+rarfile
+
+# Team 2 (Nilofar): Neo4j graph loader
+neo4j

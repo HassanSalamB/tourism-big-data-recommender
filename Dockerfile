@@ -12,11 +12,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV PYTHONPATH=/app/src
+
 # Copy the rest of your code
 COPY . .
 
-# Run the ingestion script by default
-CMD ["sh", "-c", "python3 src/ingestion/extractapi_bronze.py"]
+# Default worker: API bronze ingest only. Full DAG: `python3 -m pipeline`
+CMD ["python3", "-m", "src.pipeline", "--silver-full"]
 
 # Expose any necessary ports (if applicable)
 EXPOSE 8000
