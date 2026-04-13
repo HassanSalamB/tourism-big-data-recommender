@@ -85,6 +85,46 @@ def _query_to_dataframe(conn, query: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
+def _ensure_silver_state_table(cursor):
+    # Store incremental sync state so silver can read only newly updated bronze docs.
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS silver_pipeline_state (
+            pipeline_name TEXT PRIMARY KEY,
+            last_bronze_updated_at TIMESTAMPTZ,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+
+def _get_last_bronze_watermark(cursor):
+    cursor.execute(
+        """
+        SELECT last_bronze_updated_at
+        FROM silver_pipeline_state
+        WHERE pipeline_name = 'silver_normalize'
+        """
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def _set_last_bronze_watermark(cursor, watermark):
+    # The watermark limits the optional incremental scan; hash comparison still
+    # remains the final proof that a bronze row changed.
+    cursor.execute(
+        """
+        INSERT INTO silver_pipeline_state(pipeline_name, last_bronze_updated_at, updated_at)
+        VALUES ('silver_normalize', %s, CURRENT_TIMESTAMP)
+        ON CONFLICT (pipeline_name) DO UPDATE
+        SET last_bronze_updated_at = EXCLUDED.last_bronze_updated_at,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (watermark,),
+    )
+
+
 def extract_first_text(value, preferred_langs=("fr", "en")):
     # DATAtourisme text fields can be plain strings, lists, or language dictionaries.
     if value is None:
@@ -513,37 +553,14 @@ def _replace_price_rows(cursor, price_rows, place_ids):
             (place_ids,),
         )
     if price_rows:
-        cursor.execute(
-            """
-            CREATE TEMP TABLE silver_prices_raw_tmp (
-                place_id TEXT,
-                min_price NUMERIC,
-                max_price NUMERIC,
-                currency TEXT
-            ) ON COMMIT DROP
-            """
-        )
         execute_values(
             cursor,
             """
-            INSERT INTO silver_prices_raw_tmp(place_id, min_price, max_price, currency)
+            INSERT INTO silver_prices(place_id, min_price, max_price, currency)
             VALUES %s
+            ON CONFLICT DO NOTHING
             """,
             price_rows,
-        )
-        cursor.execute(
-            """
-            INSERT INTO silver_prices(place_id, min_price, max_price, currency)
-            SELECT
-                place_id,
-                MIN(min_price) AS min_price,
-                MAX(COALESCE(max_price, min_price)) AS max_price,
-                currency
-            FROM silver_prices_raw_tmp
-            WHERE min_price IS NOT NULL OR max_price IS NOT NULL OR currency IS NOT NULL
-            GROUP BY place_id, currency
-            ON CONFLICT DO NOTHING
-            """
         )
 
 
@@ -863,8 +880,14 @@ def _price_records(prices_df: pd.DataFrame) -> list[tuple]:
     # Prices are stored as NUMERIC in Postgres, so invalid strings become NULL here.
     prices["min_price"] = pd.to_numeric(prices["min_price"], errors="coerce")
     prices["max_price"] = pd.to_numeric(prices["max_price"], errors="coerce")
+    prices["max_price"] = prices["max_price"].fillna(prices["min_price"])
     prices["currency"] = _clean_text_series(prices["currency"])
     prices = prices.dropna(subset=["min_price", "max_price", "currency"], how="all")
+    prices = prices.groupby(["id", "currency"], dropna=False, as_index=False).agg(
+        min_price=("min_price", "min"),
+        max_price=("max_price", "max"),
+    )
+    prices = prices.drop_duplicates(subset=["id", "min_price", "max_price", "currency"])
     return _to_db_records(prices, ["id", "min_price", "max_price", "currency"])
 
 
@@ -883,20 +906,24 @@ def run_silver_normalize(
     cursor = conn.cursor()
     try:
         _ensure_silver_tables(cursor)
+        _ensure_silver_state_table(cursor)
         conn.commit()
 
         if not _bronze_table_exists(cursor):
             print("[Silver] Skip: bronze_raw_poi table does not exist yet.")
             return
 
-        last_bronze_watermark = None
-        if test_mode:
+        last_bronze_watermark = _get_last_bronze_watermark(cursor)
+        if last_bronze_watermark is not None and not test_mode:
+            print(f"[Silver] Incremental read enabled from bronze watermark: {last_bronze_watermark}")
+        elif test_mode:
             print(f"[Silver] Test mode: reading up to {test_limit} changed bronze rows.")
         else:
-            print("[Silver] Full bronze comparison mode (no watermark).")
+            print("[Silver] Full bronze comparison mode (no watermark yet).")
 
         normalized = 0
         scanned = 0
+        max_bronze_updated_at = last_bronze_watermark
         read_conn = conn_env()
 
         for bronze_df in _stream_changed_bronze_chunks(
@@ -907,6 +934,12 @@ def run_silver_normalize(
             batch_size,
         ):
             scanned += len(bronze_df)
+            chunk_max_updated_at = bronze_df["updated_at"].dropna().max()
+            if pd.notna(chunk_max_updated_at):
+                # Track the newest bronze timestamp successfully seen so the next run
+                # can start from that watermark in non-test mode.
+                if max_bronze_updated_at is None or chunk_max_updated_at > max_bronze_updated_at:
+                    max_bronze_updated_at = chunk_max_updated_at
 
             try:
                 (
@@ -949,6 +982,8 @@ def run_silver_normalize(
                 print(f"[Silver] Error normalizing pandas chunk ending at row {scanned}: {exc}")
 
         _cleanup_orphan_categories(cursor)
+        if not test_mode and max_bronze_updated_at is not None:
+            _set_last_bronze_watermark(cursor, max_bronze_updated_at)
         conn.commit()
 
         _write_silver_parquet(conn, parquet_output)
