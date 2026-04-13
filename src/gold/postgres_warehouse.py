@@ -56,8 +56,8 @@ def _rows_to_dataframe(rows, columns) -> pd.DataFrame:
 def _stream_silver_chunks(conn, batch_size: int):
     # Aggregate categories in SQL so each pandas row represents one POI.
     query = """
-SELECT
-    p.id,
+	SELECT
+	    p.id,
     p.name,
     p.lat,
     p.lon,
@@ -75,15 +75,31 @@ GROUP BY
     p.lat,
     p.lon,
     p.city
-ORDER BY p.id
-"""
+	ORDER BY p.id
+	"""
     with conn.cursor(name="gold_silver_stream") as stream:
         stream.itersize = batch_size
         stream.execute(query)
+        first_row = None
+        if stream.description is None:
+            # psycopg2 should normally populate `.description` right after `.execute()`,
+            # but some environments only do so after the first fetch on server-side cursors.
+            first_row = stream.fetchone()
+            if first_row is None:
+                return
+        if stream.description is None:
+            raise RuntimeError(
+                "Gold streaming cursor has no column description after execute/fetch. "
+                "Check that the silver SELECT query returns a result set."
+            )
         columns = [desc[0] for desc in stream.description]
         while True:
             # Keep gold memory bounded even if silver contains hundreds of thousands of POIs.
-            rows = stream.fetchmany(batch_size)
+            if first_row is not None:
+                rows = [first_row, *stream.fetchmany(max(batch_size - 1, 0))]
+                first_row = None
+            else:
+                rows = stream.fetchmany(batch_size)
             if not rows:
                 break
             yield _rows_to_dataframe(rows, columns)

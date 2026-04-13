@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import warnings
 
 import pandas as pd
 from psycopg2.extras import execute_values
@@ -41,6 +42,28 @@ SILVER_TEXT_COLUMNS = tuple(
     column for column in SILVER_PLACE_COLUMNS if column not in {"lat", "lon"}
 )
 REQUIRED_PLACE_COLUMNS = ("id", "name", "lat", "lon")
+
+
+def _parse_time_series(values: pd.Series) -> pd.Series:
+    # Parse time-like values with explicit formats first to avoid pandas falling back
+    # to slow per-row dateutil parsing (and emitting warnings).
+    raw = values.astype("string")
+    parsed = pd.to_datetime(raw, format="%H:%M:%S", errors="coerce").dt.time
+    missing = parsed.isna() & raw.notna()
+    if missing.any():
+        parsed_hm = pd.to_datetime(raw[missing], format="%H:%M", errors="coerce").dt.time
+        parsed.loc[missing] = parsed_hm
+        missing = parsed.isna() & raw.notna()
+    if missing.any():
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"Could not infer format, so each element will be parsed individually.*",
+                category=UserWarning,
+            )
+            parsed_fallback = pd.to_datetime(raw[missing], errors="coerce").dt.time
+        parsed.loc[missing] = parsed_fallback
+    return parsed
 
 
 def _ensure_list(value):
@@ -830,8 +853,8 @@ def _timing_records(timings_df: pd.DataFrame) -> list[tuple]:
     # Coerce bad dates/times to NaT, then drop rows where every timing field is missing.
     timings["start_date"] = pd.to_datetime(timings["start_date"], errors="coerce").dt.date
     timings["end_date"] = pd.to_datetime(timings["end_date"], errors="coerce").dt.date
-    timings["start_time"] = pd.to_datetime(timings["start_time"], errors="coerce").dt.time
-    timings["end_time"] = pd.to_datetime(timings["end_time"], errors="coerce").dt.time
+    timings["start_time"] = _parse_time_series(timings["start_time"])
+    timings["end_time"] = _parse_time_series(timings["end_time"])
     timings = timings.dropna(
         subset=["start_date", "end_date", "start_time", "end_time"],
         how="all",
