@@ -29,7 +29,6 @@ from utils.connections import conn_env
 load_dotenv()
 
 API_TOKEN = os.getenv("DATATOURISME_TOKEN")
-BRONZE_FEED_STATE_NAME = "datatourisme_catalog"
 
 
 def _metadata_path(zip_path: str) -> str:
@@ -70,64 +69,6 @@ def _download_headers(metadata: dict) -> dict:
     if metadata.get("last_modified"):
         headers["If-Modified-Since"] = metadata["last_modified"]
     return headers
-
-
-def _api_key() -> str | None:
-    explicit_key = os.getenv("DATATOURISME_API_KEY")
-    if explicit_key:
-        return explicit_key
-    if not API_TOKEN:
-        return None
-    # The ZIP feed token is stored as `api_key/feed_id`; the catalog API uses only the API key.
-    return API_TOKEN.split("/", 1)[0]
-
-
-def _catalog_api_url(config: dict) -> str:
-    return config.get("api", {}).get("catalog_url", "https://api.datatourisme.fr/v1/catalog")
-
-
-def _fetch_catalog_freshness(config: dict) -> dict | None:
-    api_key = _api_key()
-    if not api_key:
-        print(
-            "[Bronze API] Catalog freshness probe skipped: "
-            "DATATOURISME_API_KEY/DATATOURISME_TOKEN missing."
-        )
-        return None
-
-    try:
-        # This probe is the best no-download check, but it depends on the API key
-        # being authorized for the DATAtourisme catalog endpoint.
-        response = requests.get(
-            _catalog_api_url(config),
-            headers={"X-API-Key": api_key},
-            params={
-                "fields": config.get("api", {}).get(
-                    "catalog_fields",
-                    "uuid,lastUpdateDatatourisme",
-                ),
-                "sort": config.get("api", {}).get(
-                    "catalog_sort",
-                    "lastUpdateDatatourisme[desc]",
-                ),
-                "page_size": int(config.get("api", {}).get("catalog_page_size", 1)),
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except Exception as exc:
-        print(f"[Bronze API] Catalog freshness probe failed: {exc}")
-        return None
-
-    objects = payload.get("objects") or []
-    # We keep a tiny signature instead of storing the whole catalog response.
-    latest = objects[0] if objects else {}
-    return {
-        "total": payload.get("meta", {}).get("total"),
-        "latest_uuid": latest.get("uuid"),
-        "latest_last_update_datatourisme": latest.get("lastUpdateDatatourisme"),
-    }
 
 
 def _content_length(response) -> int | None:
@@ -203,101 +144,6 @@ def ensure_bronze_table(cursor):
         "CREATE INDEX IF NOT EXISTS idx_bronze_raw_poi_updated_at "
         "ON bronze_raw_poi(updated_at)"
     )
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS bronze_feed_state (
-            source_name TEXT PRIMARY KEY,
-            total_count INTEGER,
-            latest_uuid TEXT,
-            latest_last_update_datatourisme TEXT,
-            checked_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            downloaded_at TIMESTAMPTZ
-        )
-        """
-    )
-
-
-def _bronze_has_rows(cursor) -> bool:
-    cursor.execute("SELECT EXISTS (SELECT 1 FROM bronze_raw_poi LIMIT 1)")
-    return cursor.fetchone()[0]
-
-
-def _load_feed_state(cursor, source_name: str = BRONZE_FEED_STATE_NAME) -> dict | None:
-    cursor.execute(
-        """
-        SELECT total_count, latest_uuid, latest_last_update_datatourisme
-        FROM bronze_feed_state
-        WHERE source_name = %s
-        """,
-        (source_name,),
-    )
-    row = cursor.fetchone()
-    if not row:
-        return None
-    return {
-        "total": row[0],
-        "latest_uuid": row[1],
-        "latest_last_update_datatourisme": row[2],
-    }
-
-
-def _save_feed_state(
-    cursor,
-    freshness: dict,
-    downloaded: bool,
-    source_name: str = BRONZE_FEED_STATE_NAME,
-) -> None:
-    if not freshness:
-        return
-    # `downloaded_at` only moves when we actually downloaded the ZIP; `checked_at`
-    # moves on every successful catalog probe.
-    cursor.execute(
-        """
-        INSERT INTO bronze_feed_state(
-            source_name,
-            total_count,
-            latest_uuid,
-            latest_last_update_datatourisme,
-            checked_at,
-            downloaded_at
-        )
-        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END)
-        ON CONFLICT (source_name) DO UPDATE
-        SET total_count = EXCLUDED.total_count,
-            latest_uuid = EXCLUDED.latest_uuid,
-            latest_last_update_datatourisme = EXCLUDED.latest_last_update_datatourisme,
-            checked_at = CURRENT_TIMESTAMP,
-            downloaded_at = CASE
-                WHEN %s THEN CURRENT_TIMESTAMP
-                ELSE bronze_feed_state.downloaded_at
-            END
-        """,
-        (
-            source_name,
-            freshness.get("total"),
-            freshness.get("latest_uuid"),
-            freshness.get("latest_last_update_datatourisme"),
-            downloaded,
-            downloaded,
-        ),
-    )
-
-
-def _should_skip_download_from_catalog(cursor, config: dict) -> tuple[bool, dict | None]:
-    freshness = _fetch_catalog_freshness(config)
-    if not freshness:
-        return False, None
-
-    previous = _load_feed_state(cursor)
-    # The skip is safe only when both the catalog signature matches and bronze
-    # already has rows; an empty bronze table must still be populated.
-    if previous == freshness and _bronze_has_rows(cursor):
-        print("[Bronze API] Catalog freshness signature unchanged. Skipping ZIP download.")
-        _save_feed_state(cursor, freshness, downloaded=False)
-        return True, freshness
-
-    print("[Bronze API] Catalog freshness changed or not recorded. ZIP download required.")
-    return False, freshness
 
 
 def _download_zip(url: str, zip_path: str):
@@ -550,17 +396,6 @@ def run_bronze_api_ingest():
                 print("[Bronze API] Connected to Postgres")
                 ensure_bronze_table(cursor)
                 conn.commit()
-                # Try the no-download path first; if it fails, the ZIP path still works.
-                skip_download, freshness = _should_skip_download_from_catalog(
-                    cursor,
-                    config,
-                )
-                conn.commit()
-                if skip_download:
-                    print("[Bronze API] Bronze ingest skipped: API data is unchanged.")
-                    print("[Pipeline] Bronze API ingest: done")
-                    return
-
                 zip_path = _download_zip(config["api"]["feed_url"], zip_path)
                 # Bronze stops at raw storage; no normalization should happen in this stage.
                 ingest_zip_to_postgres(
@@ -569,9 +404,6 @@ def run_bronze_api_ingest():
                     zip_path,
                     batch_size=int(config.get("api", {}).get("batch_size", 1000)),
                 )
-                if freshness:
-                    _save_feed_state(cursor, freshness, downloaded=True)
-                    conn.commit()
     except Exception as exc:
         print(f"[Bronze API] Error during ingestion: {exc}")
 
