@@ -1,12 +1,12 @@
 flowchart LR
     API["DATAtourisme ZIP Feed"]
-    CATALOG["Catalog Freshness Probe<br/>(optional)"]
     ZIP["Local ZIP Cache<br/>data/raw/datatourisme_download.zip"]
+    META["Local Metadata Cache<br/>data/raw/datatourisme_download.zip.metadata.json"]
 
     subgraph BRONZE["Bronze Layer: Raw Source Of Truth"]
-        BINGEST["src/bronze/api_ingest.py"]
+        BFETCH["src/bronze/data_api.py<br/>API fetch + cache checks"]
+        BLOAD["src/bronze/bronze_loader.py<br/>ZIP parse + bronze upsert"]
         BRAW[("PostgreSQL<br/>bronze_raw_poi<br/>raw_payload JSONB + content_hash")]
-        BSTATE[("PostgreSQL<br/>bronze_feed_state")]
     end
 
     subgraph SILVER["Silver Layer: Cleaned And Normalized"]
@@ -16,7 +16,6 @@ flowchart LR
         SPLACECAT[("PostgreSQL<br/>silver_place_categories")]
         STIME[("PostgreSQL<br/>silver_timings")]
         SPRICE[("PostgreSQL<br/>silver_prices")]
-        SSTATE[("PostgreSQL<br/>silver_pipeline_state")]
         SPARQUET["Parquet Snapshot<br/>data/silver/parquet/places.parquet"]
     end
 
@@ -30,29 +29,28 @@ flowchart LR
         NEO[("Neo4j<br/>POI, City, Category graph")]
     end
 
-    CATALOG -->|unchanged: skip ZIP when available| BINGEST
-    API -->|download when needed| BINGEST
-    BINGEST --> ZIP
-    ZIP -->|stream objects/*.json| BINGEST
-    BINGEST -->|upsert new/changed raw POIs| BRAW
-    BINGEST -->|save freshness signature| BSTATE
+    API --> BFETCH
+    BFETCH --> ZIP
+    BFETCH --> META
+    ZIP --> BLOAD
+    META --> BLOAD
+    BLOAD --> BRAW
 
     BRAW -->|SQL hash comparison<br/>content_hash vs source_content_hash| SNORM
-    SNORM -->|clean id/name/lat/lon/text| SPLACES
-    SNORM -->|explode unique @type values| SCAT
+    SNORM --> SPLACES
+    SNORM --> SCAT
     SNORM --> SPLACECAT
-    SNORM -->|parse dates/times| STIME
-    SNORM -->|parse numeric prices| SPRICE
-    SNORM -->|watermark metadata| SSTATE
+    SNORM --> STIME
+    SNORM --> SPRICE
     SNORM --> SPARQUET
 
-    SPLACES -->|cleaned POI feed| GPG
+    SPLACES --> GPG
     SCAT --> GPG
     SPLACECAT --> GPG
     GPG --> GCLUSTERS
     GPG -->|updates gold_pg_synced_at| SPLACES
 
-    SPLACES -->|changed rows only| GNEO
+    SPLACES --> GNEO
     SCAT --> GNEO
     SPLACECAT --> GNEO
     GNEO --> NEO

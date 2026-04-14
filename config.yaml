@@ -2,10 +2,6 @@
 api:
   # The specific DATAtourisme feed URL
   feed_url: "https://diffuseur.datatourisme.fr/webservice/"
-  catalog_url: "https://api.datatourisme.fr/v1/catalog"
-  catalog_fields: "uuid,lastUpdateDatatourisme"
-  catalog_sort: "lastUpdateDatatourisme[desc]"
-  catalog_page_size: 1
   download_retries: 3
   download_wait_seconds: 10
   download_chunk_mb: 1

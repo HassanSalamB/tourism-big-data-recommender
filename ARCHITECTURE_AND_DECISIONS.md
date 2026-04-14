@@ -33,20 +33,19 @@ src/pipeline.py
 File:
 
 ```text
-src/bronze/api_ingest.py
+src/bronze/bronze_loader.py
+src/bronze/data_api.py
 ```
 
 Primary tables:
 
 ```text
 bronze_raw_poi
-bronze_feed_state
 ```
 
 Bronze responsibilities:
 
 - download the DATAtourisme ZIP feed
-- optionally probe catalog freshness to avoid unnecessary downloads when the API allows it
 - stream ZIP JSON entries instead of loading the full archive into memory
 - store the raw JSON payload in Postgres `JSONB`
 - compute a stable SHA-256 `content_hash` for each POI
@@ -77,7 +76,6 @@ silver_categories
 silver_place_categories
 silver_timings
 silver_prices
-silver_pipeline_state
 ```
 
 Silver responsibilities:
@@ -213,7 +211,6 @@ Bronze:
 
 ```text
 bronze_raw_poi
-bronze_feed_state
 ```
 
 Silver:
@@ -224,7 +221,6 @@ silver_categories
 silver_place_categories
 silver_timings
 silver_prices
-silver_pipeline_state
 ```
 
 Gold Postgres:
@@ -274,7 +270,8 @@ bolt://neo4j:7687 from inside Docker
 
 ```text
 src/pipeline.py
-src/bronze/api_ingest.py
+src/bronze/bronze_loader.py
+src/bronze/data_api.py
 src/silver/data_normalizer.py
 src/gold/postgres_warehouse.py
 src/gold/neo4j_graph_loader.py

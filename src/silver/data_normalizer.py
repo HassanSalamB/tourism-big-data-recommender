@@ -51,7 +51,9 @@ def _parse_time_series(values: pd.Series) -> pd.Series:
     parsed = pd.to_datetime(raw, format="%H:%M:%S", errors="coerce").dt.time
     missing = parsed.isna() & raw.notna()
     if missing.any():
-        parsed_hm = pd.to_datetime(raw[missing], format="%H:%M", errors="coerce").dt.time
+        parsed_hm = pd.to_datetime(
+            raw[missing], format="%H:%M", errors="coerce"
+        ).dt.time
         parsed.loc[missing] = parsed_hm
         missing = parsed.isna() & raw.notna()
     if missing.any():
@@ -83,46 +85,6 @@ def _query_to_dataframe(conn, query: str) -> pd.DataFrame:
         rows = cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
     return pd.DataFrame(rows, columns=columns)
-
-
-def _ensure_silver_state_table(cursor):
-    # Store incremental sync state so silver can read only newly updated bronze docs.
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS silver_pipeline_state (
-            pipeline_name TEXT PRIMARY KEY,
-            last_bronze_updated_at TIMESTAMPTZ,
-            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    )
-
-
-def _get_last_bronze_watermark(cursor):
-    cursor.execute(
-        """
-        SELECT last_bronze_updated_at
-        FROM silver_pipeline_state
-        WHERE pipeline_name = 'silver_normalize'
-        """
-    )
-    row = cursor.fetchone()
-    return row[0] if row else None
-
-
-def _set_last_bronze_watermark(cursor, watermark):
-    # The watermark limits the optional incremental scan; hash comparison still
-    # remains the final proof that a bronze row changed.
-    cursor.execute(
-        """
-        INSERT INTO silver_pipeline_state(pipeline_name, last_bronze_updated_at, updated_at)
-        VALUES ('silver_normalize', %s, CURRENT_TIMESTAMP)
-        ON CONFLICT (pipeline_name) DO UPDATE
-        SET last_bronze_updated_at = EXCLUDED.last_bronze_updated_at,
-            updated_at = CURRENT_TIMESTAMP
-        """,
-        (watermark,),
-    )
 
 
 def extract_first_text(value, preferred_langs=("fr", "en")):
@@ -263,8 +225,12 @@ def extract_prices(item):
         for spec in _ensure_list(offer.get("schema:priceSpecification")):
             if not isinstance(spec, dict):
                 continue
-            min_vals = [v for v in _ensure_list(spec.get("schema:minPrice")) if v is not None]
-            max_vals = [v for v in _ensure_list(spec.get("schema:maxPrice")) if v is not None]
+            min_vals = [
+                v for v in _ensure_list(spec.get("schema:minPrice")) if v is not None
+            ]
+            max_vals = [
+                v for v in _ensure_list(spec.get("schema:maxPrice")) if v is not None
+            ]
             currency = extract_first_text(spec.get("schema:priceCurrency"))
             for min_price in min_vals or [None]:
                 for max_price in max_vals or [min_price]:
@@ -404,10 +370,16 @@ def _ensure_silver_tables(cursor):
     cursor.execute(
         "ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS source_content_hash TEXT"
     )
-    cursor.execute("ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS postal_code TEXT")
+    cursor.execute(
+        "ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS postal_code TEXT"
+    )
     cursor.execute("ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS region TEXT")
-    cursor.execute("ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS contact_email TEXT")
-    cursor.execute("ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS contact_phone TEXT")
+    cursor.execute(
+        "ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS contact_email TEXT"
+    )
+    cursor.execute(
+        "ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS contact_phone TEXT"
+    )
     cursor.execute("ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS website TEXT")
     cursor.execute(
         "ALTER TABLE silver_places ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
@@ -464,7 +436,9 @@ def _ensure_silver_tables(cursor):
         """
     )
     # Indexes tuned for common client filters: location + date + budget + categories.
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_silver_places_city ON silver_places(city)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_silver_places_city ON silver_places(city)"
+    )
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_silver_places_region ON silver_places(region)"
     )
@@ -650,36 +624,28 @@ def _bronze_table_exists(cursor) -> bool:
     return cursor.fetchone()[0] is not None
 
 
-def _bronze_change_filter(last_bronze_watermark, test_mode: bool):
+def _bronze_change_filter():
     # Hash comparison is the main incremental rule: only missing or changed raw
     # payloads should be normalized into silver.
-    filters = [
+    return [
         "(s.id IS NULL OR s.source_content_hash IS DISTINCT FROM b.content_hash)"
-    ]
-    params = []
-    if last_bronze_watermark is not None and not test_mode:
-        # Watermark narrows the scan after the first full run, but does not
-        # replace the hash comparison above.
-        filters.append("b.updated_at > %s")
-        params.append(last_bronze_watermark)
-    return filters, params
+    ], []
 
 
 def _rows_to_dataframe(rows) -> pd.DataFrame:
     return pd.DataFrame(
         rows,
-        columns=["id", "source_identifier", "raw_payload", "content_hash", "updated_at"],
+        columns=["id", "source_identifier", "raw_payload", "content_hash"],
     )
 
 
 def _stream_changed_bronze_chunks(
     conn,
-    last_bronze_watermark,
     test_mode: bool,
     test_limit: int,
     batch_size: int,
 ):
-    filters, params = _bronze_change_filter(last_bronze_watermark, test_mode)
+    filters, params = _bronze_change_filter()
 
     limit_clause = ""
     if test_mode:
@@ -691,8 +657,7 @@ def _stream_changed_bronze_chunks(
             b.id,
             b.source_identifier,
             b.raw_payload,
-            b.content_hash,
-            b.updated_at
+            b.content_hash
         FROM bronze_raw_poi b
         LEFT JOIN silver_places s ON s.id = b.id
         WHERE {" AND ".join(filters)}
@@ -752,9 +717,9 @@ def _normalize_places_chunk(
 
     raw_items = bronze_df["raw_payload"].map(_as_plain_object)
     extracted_fields = pd.DataFrame(raw_items.map(extract_fields_from_paths).tolist())
-    extracted_fields["source_identifier"] = extracted_fields["source_identifier"].fillna(
-        bronze_df["source_identifier"]
-    )
+    extracted_fields["source_identifier"] = extracted_fields[
+        "source_identifier"
+    ].fillna(bronze_df["source_identifier"])
     # The JSON selectors map nested ontology fields into flat columns; pandas then
     # handles type conversion, null cleanup, dedupe, and exploded child tables.
     extracted = pd.DataFrame(
@@ -777,7 +742,6 @@ def _normalize_places_chunk(
             "timings": raw_items.map(extract_timings),
             "prices": raw_items.map(extract_prices),
             "source_content_hash": bronze_df["content_hash"],
-            "bronze_updated_at": bronze_df["updated_at"],
         }
     )
 
@@ -787,7 +751,9 @@ def _normalize_places_chunk(
     extracted["lat"] = pd.to_numeric(extracted["lat"], errors="coerce")
     extracted["lon"] = pd.to_numeric(extracted["lon"], errors="coerce")
     # Invalid coordinate ranges are rejected in silver so gold can trust the data.
-    valid_coordinates = extracted["lat"].between(-90, 90) & extracted["lon"].between(-180, 180)
+    valid_coordinates = extracted["lat"].between(-90, 90) & extracted["lon"].between(
+        -180, 180
+    )
 
     cleaned_places = (
         extracted.loc[valid_coordinates]
@@ -807,7 +773,9 @@ def _normalize_places_chunk(
 
 
 def _get_category_ids(cursor, category_names) -> dict[str, int]:
-    names = pd.Series(category_names, dtype="object").dropna().drop_duplicates().tolist()
+    names = (
+        pd.Series(category_names, dtype="object").dropna().drop_duplicates().tolist()
+    )
     if not names:
         return {}
     execute_values(
@@ -820,17 +788,23 @@ def _get_category_ids(cursor, category_names) -> dict[str, int]:
         [(name,) for name in names],
     )
     # Fetch ids after the upsert because existing categories do not return ids from DO NOTHING.
-    cursor.execute("SELECT name, id FROM silver_categories WHERE name = ANY(%s)", (names,))
+    cursor.execute(
+        "SELECT name, id FROM silver_categories WHERE name = ANY(%s)", (names,)
+    )
     return dict(cursor.fetchall())
 
 
 def _category_link_records(cursor, categories_df: pd.DataFrame) -> list[tuple]:
     if categories_df.empty:
         return []
-    links = categories_df.explode("categories").rename(columns={"categories": "category"})
+    links = categories_df.explode("categories").rename(
+        columns={"categories": "category"}
+    )
     links["category"] = _clean_text_series(links["category"])
     # A POI can have many category strings; exact duplicates are removed before linking.
-    links = links.dropna(subset=["id", "category"]).drop_duplicates(subset=["id", "category"])
+    links = links.dropna(subset=["id", "category"]).drop_duplicates(
+        subset=["id", "category"]
+    )
     category_ids = _get_category_ids(cursor, links["category"])
     links["category_id"] = links["category"].map(category_ids)
     links = links.dropna(subset=["category_id"])
@@ -851,7 +825,9 @@ def _timing_records(timings_df: pd.DataFrame) -> list[tuple]:
     )
     timings = pd.concat([timings[["id"]], timing_values], axis=1)
     # Coerce bad dates/times to NaT, then drop rows where every timing field is missing.
-    timings["start_date"] = pd.to_datetime(timings["start_date"], errors="coerce").dt.date
+    timings["start_date"] = pd.to_datetime(
+        timings["start_date"], errors="coerce"
+    ).dt.date
     timings["end_date"] = pd.to_datetime(timings["end_date"], errors="coerce").dt.date
     timings["start_time"] = _parse_time_series(timings["start_time"])
     timings["end_time"] = _parse_time_series(timings["end_time"])
@@ -862,7 +838,9 @@ def _timing_records(timings_df: pd.DataFrame) -> list[tuple]:
     timings = timings.drop_duplicates(
         subset=["id", "start_date", "end_date", "start_time", "end_time"]
     )
-    return _to_db_records(timings, ["id", "start_date", "end_date", "start_time", "end_time"])
+    return _to_db_records(
+        timings, ["id", "start_date", "end_date", "start_time", "end_time"]
+    )
 
 
 def _price_records(prices_df: pd.DataFrame) -> list[tuple]:
@@ -906,40 +884,30 @@ def run_silver_normalize(
     cursor = conn.cursor()
     try:
         _ensure_silver_tables(cursor)
-        _ensure_silver_state_table(cursor)
         conn.commit()
 
         if not _bronze_table_exists(cursor):
             print("[Silver] Skip: bronze_raw_poi table does not exist yet.")
             return
 
-        last_bronze_watermark = _get_last_bronze_watermark(cursor)
-        if last_bronze_watermark is not None and not test_mode:
-            print(f"[Silver] Incremental read enabled from bronze watermark: {last_bronze_watermark}")
-        elif test_mode:
-            print(f"[Silver] Test mode: reading up to {test_limit} changed bronze rows.")
+        if test_mode:
+            print(
+                f"[Silver] Test mode: reading up to {test_limit} changed bronze rows."
+            )
         else:
-            print("[Silver] Full bronze comparison mode (no watermark yet).")
+            print("[Silver] Full bronze comparison mode.")
 
         normalized = 0
         scanned = 0
-        max_bronze_updated_at = last_bronze_watermark
         read_conn = conn_env()
 
         for bronze_df in _stream_changed_bronze_chunks(
             read_conn,
-            last_bronze_watermark,
             test_mode,
             test_limit,
             batch_size,
         ):
             scanned += len(bronze_df)
-            chunk_max_updated_at = bronze_df["updated_at"].dropna().max()
-            if pd.notna(chunk_max_updated_at):
-                # Track the newest bronze timestamp successfully seen so the next run
-                # can start from that watermark in non-test mode.
-                if max_bronze_updated_at is None or chunk_max_updated_at > max_bronze_updated_at:
-                    max_bronze_updated_at = chunk_max_updated_at
 
             try:
                 (
@@ -956,10 +924,15 @@ def run_silver_normalize(
                 )
                 changed_place_ids = changed_ids.dropna().drop_duplicates().tolist()
                 source_place_ids = (
-                    _clean_text_series(bronze_df["id"]).dropna().drop_duplicates().tolist()
+                    _clean_text_series(bronze_df["id"])
+                    .dropna()
+                    .drop_duplicates()
+                    .tolist()
                 )
                 # If pandas cleaning rejects an id, delete any older accepted copy from silver.
-                rejected_place_ids = sorted(set(source_place_ids) - set(changed_place_ids))
+                rejected_place_ids = sorted(
+                    set(source_place_ids) - set(changed_place_ids)
+                )
 
                 _delete_rejected_places(cursor, rejected_place_ids)
                 _upsert_places(cursor, place_records)
@@ -968,8 +941,12 @@ def run_silver_normalize(
                     _category_link_records(cursor, categories_df),
                     changed_place_ids,
                 )
-                _replace_timing_rows(cursor, _timing_records(timings_df), changed_place_ids)
-                _replace_price_rows(cursor, _price_records(prices_df), changed_place_ids)
+                _replace_timing_rows(
+                    cursor, _timing_records(timings_df), changed_place_ids
+                )
+                _replace_price_rows(
+                    cursor, _price_records(prices_df), changed_place_ids
+                )
                 conn.commit()
 
                 normalized += len(place_records)
@@ -979,15 +956,17 @@ def run_silver_normalize(
                 )
             except Exception as exc:
                 conn.rollback()
-                print(f"[Silver] Error normalizing pandas chunk ending at row {scanned}: {exc}")
+                print(
+                    f"[Silver] Error normalizing pandas chunk ending at row {scanned}: {exc}"
+                )
 
         _cleanup_orphan_categories(cursor)
-        if not test_mode and max_bronze_updated_at is not None:
-            _set_last_bronze_watermark(cursor, max_bronze_updated_at)
         conn.commit()
 
         _write_silver_parquet(conn, parquet_output)
-        print(f"[Silver] DONE: {normalized} changed POIs normalized -> {parquet_output}")
+        print(
+            f"[Silver] DONE: {normalized} changed POIs normalized -> {parquet_output}"
+        )
     finally:
         conn.close()
         if read_conn is not None:
@@ -999,9 +978,9 @@ def run_silver_normalize(
 if __name__ == "__main__":
     cfg = load_config()
     run_silver_normalize(
-        parquet_output=cfg.get(
-            "db_paths", {}
-        ).get("parquet_output", "data/silver/parquet/places.parquet"),
+        parquet_output=cfg.get("db_paths", {}).get(
+            "parquet_output", "data/silver/parquet/places.parquet"
+        ),
         test_mode=True,
         test_limit=5000,
         batch_size=int(cfg.get("api", {}).get("batch_size", 1000)),

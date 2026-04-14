@@ -36,7 +36,6 @@ Create or update `.env` in the project root:
 
 ```env
 DATATOURISME_TOKEN=your_api_key/your_feed_id
-DATATOURISME_API_KEY=your_api_key
 
 DB_USER=admin
 DB_PASSWORD=root
@@ -54,7 +53,6 @@ NEO4J_PORT=7687
 Notes:
 
 - `DATATOURISME_TOKEN` is used to download the ZIP feed from `https://diffuseur.datatourisme.fr/webservice/`.
-- `DATATOURISME_API_KEY` is used for the catalog freshness probe when the API accepts it.
 - In Docker, `DB_HOST=postgres` and `NEO4J_URI=bolt://neo4j:7687` are correct because services talk through the Compose network.
 - From your host browser, use `localhost` ports instead.
 
@@ -148,9 +146,16 @@ This is useful after changing silver cleaning logic, because silver normally ski
 
 ## Pipeline Stages
 
-### Bronze: `src/bronze/api_ingest.py`
+### Bronze: `src/bronze/bronze_loader.py` + `src/bronze/data_api.py`
 
-Bronze downloads the DATAtourisme ZIP and stores raw POI JSON in Postgres:
+Bronze is split into two steps:
+
+- `src/bronze/data_api.py`: API call + ZIP/metadata caching
+- `src/bronze/bronze_loader.py`: ZIP parsing + Postgres bronze upsert
+
+The pipeline calls them in sequence: fetch first, then load.
+
+Raw POI JSON is stored in Postgres:
 
 ```text
 bronze_raw_poi
@@ -169,13 +174,13 @@ Important columns:
 
 Bronze compares incoming ZIP documents with existing Postgres hashes. If the hash is unchanged, it skips rewriting that POI.
 
-Bronze also stores catalog freshness information in:
+Bronze also stores ZIP download metadata in:
 
 ```text
-bronze_feed_state
+data/raw/datatourisme_download.zip.metadata.json
 ```
 
-If the catalog API probe works and the feed signature is unchanged, bronze can skip the ZIP download completely. If the probe fails or is unauthorized, the pipeline falls back to the ZIP download path.
+If `token_filename` is unchanged and bronze was already loaded for that filename, bronze skips reloading raw rows and the pipeline skips silver/gold.
 
 ### Silver: `src/silver/data_normalizer.py`
 
@@ -194,7 +199,6 @@ silver_categories
 silver_place_categories
 silver_timings
 silver_prices
-silver_pipeline_state
 ```
 
 Silver cleaning includes:
@@ -286,7 +290,8 @@ gold_pg_synced_at IS NULL OR updated_at > gold_pg_synced_at
     ├── pipeline.py
     ├── architecture.mmd
     ├── bronze/
-    │   └── api_ingest.py
+    │   ├── bronze_loader.py
+    │   └── data_api.py
     ├── silver/
     │   └── data_normalizer.py
     ├── gold/
@@ -302,7 +307,7 @@ gold_pg_synced_at IS NULL OR updated_at > gold_pg_synced_at
 Compile-check Python files inside Docker:
 
 ```bash
-docker compose run --rm --no-deps etl_worker python3 -m py_compile src/pipeline.py src/bronze/api_ingest.py src/silver/data_normalizer.py src/gold/postgres_warehouse.py src/gold/neo4j_graph_loader.py src/utils/config.py src/utils/connections.py
+docker compose run --rm --no-deps etl_worker python3 -m py_compile src/pipeline.py src/bronze/bronze_loader.py src/bronze/data_api.py src/silver/data_normalizer.py src/gold/postgres_warehouse.py src/gold/neo4j_graph_loader.py src/utils/config.py src/utils/connections.py
 ```
 
 Open a shell in the ETL container:

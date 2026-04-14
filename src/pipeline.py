@@ -13,7 +13,8 @@ from __future__ import annotations
 import argparse
 import os
 
-from bronze.api_ingest import run_bronze_api_ingest
+from bronze.bronze_loader import run_bronze_loader
+from bronze.data_api import run_data_api_fetch
 from gold.neo4j_graph_loader import run_neo4j_graph_load
 from gold.postgres_warehouse import run_gold_postgres_dw
 from silver.data_normalizer import run_silver_normalize
@@ -70,8 +71,34 @@ def main():
     )
 
     # Each stage is optional for debugging, but the default run executes the full flow.
+    bronze_result = None
     if not args.skip_api:
-        run_bronze_api_ingest()
+        # `run_data_api_fetch` only handles remote/API concerns and returns local ZIP path.
+        fetch_result = run_data_api_fetch(cfg)
+        if not fetch_result.get("ok"):
+            bronze_result = {
+                "ok": False,
+                "has_changes": True,
+                "skipped_ingest": False,
+                "counts": None,
+                "error": fetch_result.get("error"),
+            }
+        else:
+            # `run_bronze_loader` only handles ZIP->Postgres bronze loading.
+            bronze_result = run_bronze_loader(
+                fetch_result["zip_path"],
+                batch_size=int(cfg.get("api", {}).get("batch_size", 1000)),
+            )
+
+    if (
+        not args.skip_api
+        and bronze_result is not None
+        and bronze_result.get("ok")
+        and not bronze_result.get("has_changes", True)
+    ):
+        print("[Pipeline] Bronze reported no changes. Skipping Silver and Gold stages.")
+        print("[Pipeline] All requested stages finished.")
+        return
 
     if not args.skip_silver:
         run_silver_normalize(
