@@ -267,10 +267,9 @@ def run_bronze_loader(zip_path: str, batch_size: int = 1000) -> dict:
                     print("[Bronze API] Bronze ingest skipped: unchanged token filename already loaded.")
                     print("[Pipeline] Bronze load: done")
                     # Contract for pipeline:
-                    # {"ok": bool, "has_changes": bool, "skipped_ingest": bool, "counts": dict|None}
+                    # {"ok": bool, "skipped_ingest": bool, "counts": dict|None}
                     return {
                         "ok": True,
-                        "has_changes": False,
                         "skipped_ingest": True,
                         "counts": {"total": 0, "inserted": 0, "updated": 0, "unchanged": 0},
                     }
@@ -279,7 +278,6 @@ def run_bronze_loader(zip_path: str, batch_size: int = 1000) -> dict:
                 print("[Pipeline] Bronze load: done")
                 return {
                     "ok": True,
-                    "has_changes": (counts["inserted"] + counts["updated"]) > 0,
                     "skipped_ingest": False,
                     "counts": counts,
                 }
@@ -287,7 +285,6 @@ def run_bronze_loader(zip_path: str, batch_size: int = 1000) -> dict:
         print(f"[Bronze API] Error during bronze load: {exc}")
         return {
             "ok": False,
-            "has_changes": True,
             "skipped_ingest": False,
             "counts": None,
             "error": str(exc),

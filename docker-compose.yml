@@ -62,6 +62,7 @@ services:
       - ./data:/app/data
       - ./src:/app/src
       - ./config.yaml:/app/config.yaml
+      - ./.env:/app/.env:ro
     depends_on:
       postgres:
         condition: service_healthy

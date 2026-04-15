@@ -76,13 +76,15 @@ def main():
         # `run_data_api_fetch` only handles remote/API concerns and returns local ZIP path.
         fetch_result = run_data_api_fetch(cfg)
         if not fetch_result.get("ok"):
-            bronze_result = {
-                "ok": False,
-                "has_changes": True,
-                "skipped_ingest": False,
-                "counts": None,
-                "error": fetch_result.get("error"),
-            }
+            print(f"[Pipeline] Bronze fetch failed: {fetch_result.get('error')}")
+            print("[Pipeline] Skipping Silver and Gold stages.")
+            print("[Pipeline] All requested stages finished.")
+            return
+        elif not fetch_result.get("zip_path"):
+            print("[Pipeline] Bronze fetch reported unchanged ZIP filename. Skipping Bronze load.")
+            print("[Pipeline] Skipping Silver and Gold stages.")
+            print("[Pipeline] All requested stages finished.")
+            return
         else:
             # `run_bronze_loader` only handles ZIP->Postgres bronze loading.
             bronze_result = run_bronze_loader(
@@ -94,7 +96,7 @@ def main():
         not args.skip_api
         and bronze_result is not None
         and bronze_result.get("ok")
-        and not bronze_result.get("has_changes", True)
+        and bronze_result.get("skipped_ingest", False)
     ):
         print("[Pipeline] Bronze reported no changes. Skipping Silver and Gold stages.")
         print("[Pipeline] All requested stages finished.")

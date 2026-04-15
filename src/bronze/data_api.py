@@ -28,10 +28,11 @@ def run_data_api_fetch(config: dict) -> dict:
         config["paths"].get("zip_output_file", "datatourisme_download.zip"),
     )
     try:
-        zip_path = download_zip(config["api"]["feed_url"], zip_path)
+        zip_result = download_zip(config["api"]["feed_url"], zip_path)
         print("[Pipeline] Bronze API fetch: done")
-        # Contract for pipeline: {"ok": bool, "zip_path": str, "error"?: str}
-        return {"ok": True, "zip_path": zip_path}
+        # Contract for pipeline:
+        # {"ok": bool, "zip_path": str|None, "error"?: str}
+        return {"ok": True, "zip_path": zip_result}
     except Exception as exc:
         print(f"[Bronze API] Error during fetch: {exc}")
         return {"ok": False, "zip_path": zip_path, "error": str(exc)}
@@ -130,7 +131,7 @@ def _extract_filename(content_disposition: str | None) -> str | None:
     return filename or None
 
 
-def download_zip(url: str, zip_path: str) -> str:
+def download_zip(url: str, zip_path: str) -> str | None:
     config = load_config()
     api_config = config.get("api", {})
     download_retries = int(api_config.get("download_retries", 3))
@@ -148,7 +149,7 @@ def download_zip(url: str, zip_path: str) -> str:
             if response.status_code == 304:
                 if is_valid_zip_file(zip_path):
                     print("[Bronze API] Remote ZIP not modified. Reusing existing ZIP.")
-                    return zip_path
+                    return None
                 raise ValueError("Remote ZIP was not modified, but local ZIP is missing/corrupt")
 
             if response.status_code == 200:
@@ -175,9 +176,12 @@ def download_zip(url: str, zip_path: str) -> str:
                     raise ValueError(f"Expected ZIP payload but received Content-Type={content_type!r}")
 
                 if remote_filename and previous_token_filename == remote_filename:
-                    # Server says filename is unchanged, so no need to download body.
-                    print("[Bronze API] Token ZIP filename unchanged. Reusing existing ZIP.")
-                    return zip_path
+                    # Simple fast path: unchanged token filename => skip this run.
+                    # If local ZIP was removed, continue to download once.
+                    if os.path.exists(zip_path):
+                        print("[Bronze API] Token ZIP filename unchanged. Skipping download.")
+                        return None
+                    print("[Bronze API] Local ZIP missing; downloading fresh copy.")
 
                 if (
                     os.path.exists(zip_path)
@@ -187,7 +191,7 @@ def download_zip(url: str, zip_path: str) -> str:
                     # Fallback skip path when filename is absent but validators match.
                     if remote_filename:
                         save_zip_metadata_fields(zip_path, {"token_filename": remote_filename})
-                    return zip_path
+                    return None
 
                 os.makedirs(os.path.dirname(zip_path) or ".", exist_ok=True)
                 downloaded_bytes = 0

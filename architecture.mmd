@@ -2,6 +2,7 @@ flowchart LR
     API["DATAtourisme ZIP Feed"]
     ZIP["Local ZIP Cache<br/>data/raw/datatourisme_download.zip"]
     META["Local Metadata Cache<br/>data/raw/datatourisme_download.zip.metadata.json"]
+    CRON["Container Cron<br/>hourly schedule + startup run"]
 
     subgraph BRONZE["Bronze Layer: Raw Source Of Truth"]
         BFETCH["src/bronze/data_api.py<br/>API fetch + cache checks"]
@@ -29,6 +30,7 @@ flowchart LR
         NEO[("Neo4j<br/>POI, City, Category graph")]
     end
 
+    CRON --> BFETCH
     API --> BFETCH
     BFETCH --> ZIP
     BFETCH --> META

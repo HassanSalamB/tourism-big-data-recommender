@@ -1,0 +1,5 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Run ETL every minute (temporary test schedule).
+* * * * * /bin/sh -c 'if [ -f /app/.env ]; then set -a; . /app/.env; set +a; fi; cd /app; PYTHONPATH=/app/src python3 -m src.pipeline --silver-full' >> /proc/1/fd/1 2>> /proc/1/fd/2
