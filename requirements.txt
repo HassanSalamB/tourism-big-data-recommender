@@ -17,3 +17,7 @@ rarfile
 
 # Team 2 (Nilofar): Neo4j graph loader
 neo4j
+fastapi
+uvicorn
+scikit-learn
+
