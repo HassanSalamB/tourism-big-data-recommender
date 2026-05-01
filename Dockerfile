@@ -21,5 +21,6 @@ COPY . .
 # Default worker: install hourly cron and run ETL.
 CMD ["sh", "/app/src/cron/start_with_cron.sh"]
 
-# Expose any necessary ports (if applicable)
+# FastAPI and Streamlit dashboard ports.
 EXPOSE 8000
+EXPOSE 8501

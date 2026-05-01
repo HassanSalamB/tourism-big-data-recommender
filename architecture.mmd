@@ -1,59 +1,31 @@
 flowchart LR
-    API["DATAtourisme ZIP Feed"]
-    ZIP["Local ZIP Cache<br/>data/raw/datatourisme_download.zip"]
-    META["Local Metadata Cache<br/>data/raw/datatourisme_download.zip.metadata.json"]
-    CRON["Container Cron<br/>hourly schedule + startup run"]
+    DATATOURISME["DATAtourisme ZIP feed"]
+    CACHE["Local ZIP + metadata cache<br/>data/raw"]
+    CRON["etl_worker cron<br/>startup run + hourly refresh"]
 
-    subgraph BRONZE["Bronze Layer: Raw Source Of Truth"]
-        BFETCH["src/bronze/data_api.py<br/>API fetch + cache checks"]
-        BLOAD["src/bronze/bronze_loader.py<br/>ZIP parse + bronze upsert"]
-        BRAW[("PostgreSQL<br/>bronze_raw_poi<br/>raw_payload JSONB + content_hash")]
+    subgraph ETL["ETL pipeline"]
+        BRONZE_CODE["Bronze<br/>data_api.py + bronze_loader.py"]
+        BRONZE_DB[("Postgres<br/>bronze_raw_poi<br/>raw JSONB + content_hash")]
+        SILVER_CODE["Silver<br/>data_normalizer.py<br/>pandas chunk cleaning"]
+        SILVER_DB[("Postgres silver tables<br/>silver_places<br/>silver_categories<br/>silver_place_categories<br/>silver_timings<br/>silver_prices")]
+        GOLD_PG_CODE["Gold Postgres<br/>postgres_warehouse.py<br/>H3 grid clusters + scoring"]
+        GOLD_CLUSTER_DB[("Postgres<br/>gold_clusters<br/>cluster summaries")]
+        GOLD_NEO_CODE["Gold Neo4j<br/>neo4j_graph_loader.py"]
+        NEO_DB[("Neo4j graph<br/>POI, City, Category<br/>LOCATED_IN + HAS_CATEGORY")]
     end
 
-    subgraph SILVER["Silver Layer: Cleaned And Normalized"]
-        SNORM["src/silver/data_normalizer.py<br/>pandas chunk cleaning"]
-        SPLACES[("PostgreSQL<br/>silver_places")]
-        SCAT[("PostgreSQL<br/>silver_categories")]
-        SPLACECAT[("PostgreSQL<br/>silver_place_categories")]
-        STIME[("PostgreSQL<br/>silver_timings")]
-        SPRICE[("PostgreSQL<br/>silver_prices")]
-        SPARQUET["Parquet Snapshot<br/>data/silver/parquet/places.parquet"]
+    subgraph APP["Application services"]
+        FASTAPI["FastAPI<br/>models/app.py<br/>runtime KMeans itinerary grouping"]
+        STREAMLIT["Streamlit dashboard<br/>models/dashboard.py"]
     end
 
-    subgraph GOLDPG["Gold Layer: Postgres Serving"]
-        GPG["src/gold/postgres_warehouse.py<br/>H3 clusters + scoring"]
-        GCLUSTERS[("PostgreSQL<br/>gold_clusters")]
-    end
+    DATATOURISME --> CACHE --> BRONZE_CODE
+    CRON --> BRONZE_CODE
+    BRONZE_CODE --> BRONZE_DB --> SILVER_CODE --> SILVER_DB
+    SILVER_DB --> GOLD_PG_CODE --> GOLD_CLUSTER_DB
+    SILVER_DB --> GOLD_NEO_CODE --> NEO_DB
 
-    subgraph GOLDNEO["Gold Layer: Neo4j Graph"]
-        GNEO["src/gold/neo4j_graph_loader.py"]
-        NEO[("Neo4j<br/>POI, City, Category graph")]
-    end
-
-    CRON --> BFETCH
-    API --> BFETCH
-    BFETCH --> ZIP
-    BFETCH --> META
-    ZIP --> BLOAD
-    META --> BLOAD
-    BLOAD --> BRAW
-
-    BRAW -->|SQL hash comparison<br/>content_hash vs source_content_hash| SNORM
-    SNORM --> SPLACES
-    SNORM --> SCAT
-    SNORM --> SPLACECAT
-    SNORM --> STIME
-    SNORM --> SPRICE
-    SNORM --> SPARQUET
-
-    SPLACES --> GPG
-    SCAT --> GPG
-    SPLACECAT --> GPG
-    GPG --> GCLUSTERS
-    GPG -->|updates gold_pg_synced_at| SPLACES
-
-    SPLACES --> GNEO
-    SCAT --> GNEO
-    SPLACECAT --> GNEO
-    GNEO --> NEO
-    GNEO -->|updates neo4j_synced_at| SPLACES
+    STREAMLIT -->|"HTTP JSON"| FASTAPI
+    FASTAPI -->|"cities, categories, places, maps"| SILVER_DB
+    FASTAPI -->|"summary count"| GOLD_CLUSTER_DB
+    FASTAPI -->|"related POI suggestions"| NEO_DB

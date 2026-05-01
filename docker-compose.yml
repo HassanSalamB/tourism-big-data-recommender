@@ -74,6 +74,42 @@ services:
       - PYTHONUNBUFFERED=1
       - NEO4J_URI=bolt://neo4j:7687
 
+  api:
+    build: .
+    container_name: holiday_api
+    command: uvicorn models.app:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+    volumes:
+      - ./models:/app/models
+      - ./src:/app/src
+      - ./config.yaml:/app/config.yaml
+      - ./.env:/app/.env:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/src
+      - NEO4J_URI=bolt://neo4j:7687
+
+  dashboard:
+    build: .
+    container_name: holiday_dashboard
+    command: streamlit run models/dashboard.py --server.address 0.0.0.0 --server.port 8501
+    env_file: .env
+    volumes:
+      - ./models:/app/models
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    environment:
+      - API_BASE_URL=http://api:8000
+
 volumes:
   pg_data:
   neo4j_data:

@@ -1,6 +1,7 @@
 # Holiday Itinerary Data Platform
 
 This project builds a local ETL pipeline for DATAtourisme data. It ingests raw POI JSON into Postgres bronze tables, cleans and normalizes the data into silver tables with pandas chunks, then builds gold outputs for itinerary exploration in Postgres and Neo4j.
+It also runs a FastAPI service and Streamlit dashboard for exploring places and generating itineraries.
 
 ## What The Pipeline Does
 
@@ -10,7 +11,10 @@ DATAtourisme ZIP feed
   -> Silver cleaned relational tables
   -> Gold Postgres H3 clusters
   -> Gold Neo4j POI graph
+  -> FastAPI + Streamlit itinerary app
 ```
+
+The live itinerary generator currently uses cleaned `silver_places` rows and runtime KMeans clustering. The precomputed `gold_clusters` table is an H3-based summary layer used for analytics/dashboard counts, not the direct source of itinerary stops.
 
 The main entrypoint is:
 
@@ -71,6 +75,20 @@ Run in the background:
 docker compose up --build -d
 ```
 
+Start only the API and dashboard after the databases are already running:
+
+```bash
+docker compose up --build api dashboard
+```
+
+Generate an itinerary through the API:
+
+```bash
+curl -X POST http://localhost:8000/generate-itinerary \
+  -H "Content-Type: application/json" \
+  -d '{"city": "Paris", "days": 3, "max_places_per_day": 5, "categories": ["Beach", "Museum"]}'
+```
+
 Follow the ETL worker logs:
 
 ```bash
@@ -97,7 +115,50 @@ docker compose run --rm etl_worker python3 -m src.pipeline --skip-neo4j
 docker compose run --rm etl_worker python3 -m src.pipeline --skip-api --skip-gold-pg --skip-neo4j --silver-full
 ```
 
+## CI/CD With GitHub Actions
+
+The repository includes a GitHub Actions workflow at:
+
+```text
+.github/workflows/ci-cd.yml
+```
+
+On pull requests and pushes to `dev` or `main`, it runs:
+
+- Python syntax checks for `models/` and `src/`
+- Docker Compose config validation
+- Docker image build validation
+
+On pushes to `dev` or `main`, it can also publish the Docker image to Docker Hub if these GitHub repository secrets are configured:
+
+```text
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+```
+
+The published image tags are:
+
+```text
+DOCKERHUB_USERNAME/holiday-itinerary:dev
+DOCKERHUB_USERNAME/holiday-itinerary:main
+DOCKERHUB_USERNAME/holiday-itinerary:<git-sha>
+```
+
+Docker Hub stores the built image. It does not host or run the dashboard. To make the app visible to users, a server still needs to pull the image and run the containers.
+
 ## Web UIs And Ports
+
+FastAPI itinerary service:
+
+```text
+http://localhost:8000/docs
+```
+
+Streamlit dashboard:
+
+```text
+http://localhost:8501
+```
 
 Adminer for Postgres:
 
@@ -136,6 +197,38 @@ bolt://neo4j:7687
 ```
 
 Do not type `bolt://...` into Chrome as a web page. `bolt://` is a database driver protocol, while the browser UI is `http://localhost:7474`.
+
+## App Serving Flow
+
+The Streamlit dashboard does not query Postgres or Neo4j directly. It calls FastAPI over HTTP:
+
+```text
+Streamlit dashboard
+  -> FastAPI JSON endpoints
+  -> Postgres silver/gold tables
+  -> optional Neo4j recommendations
+```
+
+Main API endpoints:
+
+```text
+GET  /health
+GET  /summary
+GET  /cities
+GET  /categories
+GET  /places
+POST /generate-itinerary
+```
+
+`/generate-itinerary` works like this:
+
+- reads cleaned POIs for the selected city from `silver_places`
+- runs KMeans on latitude/longitude to split the city into day-sized geographic groups
+- treats selected dashboard interests/categories as preferences, not hard filters
+- fills each day with nearby POIs so one interest such as Beach does not make every stop a beach
+- asks Neo4j for related POI suggestions for the selected itinerary stops
+
+The Streamlit map is based on `silver_places.lat` and `silver_places.lon` returned by FastAPI. Neo4j powers related-place suggestions, not the geographic map.
 
 ## Fresh Rebuild
 

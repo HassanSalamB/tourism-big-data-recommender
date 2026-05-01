@@ -20,4 +20,4 @@ neo4j
 fastapi
 uvicorn
 scikit-learn
-
+streamlit

@@ -20,6 +20,8 @@ DATAtourisme feed
   -> Silver Postgres relational tables cleaned with pandas chunks
   -> Gold Postgres clusters
   -> Neo4j POI graph
+  -> FastAPI service
+  -> Streamlit dashboard
 ```
 
 The current pipeline entrypoint is:
@@ -137,6 +139,12 @@ Gold Postgres responsibilities:
 
 Gold does not repeat silver cleaning rules. For example, it no longer revalidates missing coordinates because that belongs to silver.
 
+Important distinction:
+
+- `gold_clusters` uses H3 grid cells, not KMeans
+- `gold_clusters` stores cluster summaries, not full day itineraries
+- the live dashboard itinerary currently reads actual POIs from `silver_places`
+
 ## Gold Neo4j Layer
 
 File:
@@ -158,6 +166,72 @@ Neo4j responsibilities:
 - stream changed silver rows from Postgres
 - replace refreshed POI nodes so stale relationships disappear
 - mark rows as synced in `silver_places.neo4j_synced_at`
+
+Neo4j is used by the app for related-place suggestions. It is not the source of the Streamlit geographic map.
+
+## FastAPI And Streamlit App Layer
+
+Files:
+
+```text
+models/app.py
+models/dashboard.py
+```
+
+FastAPI responsibilities:
+
+- expose JSON endpoints for the dashboard
+- read dashboard summaries from Postgres
+- read city, category, place, and map data from `silver_places` and related silver tables
+- run request-time KMeans clustering for itinerary days
+- ask Neo4j for related POI suggestions
+- return JSON-safe values to Streamlit
+
+Streamlit responsibilities:
+
+- provide the dashboard UI
+- call FastAPI with `requests`
+- show metrics, city/category exploration, maps, and generated itineraries
+- treat selected interests/categories as preferences for itinerary generation
+
+The dashboard and API communicate through HTTP:
+
+```text
+Streamlit -> FastAPI -> Postgres / Neo4j
+```
+
+Inside Docker Compose, the dashboard reaches the API with:
+
+```text
+API_BASE_URL=http://api:8000
+```
+
+From the host browser:
+
+```text
+FastAPI docs: http://localhost:8000/docs
+Streamlit:    http://localhost:8501
+```
+
+## Itinerary Generation
+
+The live itinerary flow is separate from `gold_clusters`:
+
+```text
+silver_places for selected city
+  -> KMeans on lat/lon
+  -> one cluster per requested day
+  -> nearest POIs to each cluster center
+  -> selected interests/categories lightly preferred
+  -> Neo4j related suggestions
+  -> Streamlit itinerary cards and map
+```
+
+KMeans is used because the number of clusters depends on the user request. For example, a 3-day trip creates up to 3 geographic groups, while a 5-day trip creates up to 5.
+
+Selected interests such as Beach, Museum, or Restaurant are preferences, not hard filters. This keeps an itinerary varied: selecting Beach can add beach-related stops, but the planner still fills days with other nearby POIs.
+
+Neo4j does not choose the day clusters. It adds related POI suggestions for places already selected by the Postgres/KMeans flow.
 
 ## Incremental Strategy
 
@@ -257,6 +331,18 @@ Neo4j Browser:
 
 ```text
 http://localhost:7474
+```
+
+FastAPI:
+
+```text
+http://localhost:8000/docs
+```
+
+Streamlit:
+
+```text
+http://localhost:8501
 ```
 
 Neo4j Bolt:
