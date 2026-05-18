@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Check Python syntax
-        run: python -m compileall models src
+        run: python -m compileall src
 
       - name: Create CI environment file
         run: |

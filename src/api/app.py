@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field
 from sklearn.cluster import KMeans
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
-SRC_DIR = os.path.join(PROJECT_ROOT, "src")
+SRC_DIR = os.path.dirname(CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(SRC_DIR)
 for path in (PROJECT_ROOT, SRC_DIR):
     if path not in sys.path:
         sys.path.append(path)

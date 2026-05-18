@@ -125,7 +125,7 @@ The repository includes a GitHub Actions workflow at:
 
 On pull requests and pushes to `dev` or `main`, it runs:
 
-- Python syntax checks for `models/` and `src/`
+- Python syntax checks for `src/`
 - Docker Compose config validation
 - Docker image build validation
 

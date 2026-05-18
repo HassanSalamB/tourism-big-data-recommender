@@ -174,8 +174,8 @@ Neo4j is used by the app for related-place suggestions. It is not the source of 
 Files:
 
 ```text
-models/app.py
-models/dashboard.py
+src/api/app.py
+src/api/dashboard.py
 ```
 
 FastAPI responsibilities:

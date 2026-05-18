@@ -15,8 +15,8 @@ flowchart LR
     end
 
     subgraph APP["Application services"]
-        FASTAPI["FastAPI<br/>models/app.py<br/>runtime KMeans itinerary grouping"]
-        STREAMLIT["Streamlit dashboard<br/>models/dashboard.py"]
+        FASTAPI["FastAPI<br/>src/api/app.py<br/>runtime KMeans itinerary grouping"]
+        STREAMLIT["Streamlit dashboard<br/>src/api/dashboard.py"]
     end
 
     DATATOURISME --> CACHE --> BRONZE_CODE

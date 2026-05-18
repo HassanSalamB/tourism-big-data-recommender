@@ -1,10 +1,9 @@
-
 services:
   postgres:
     image: postgres:15
     container_name: postgres_db
     environment:
-      - POSTGRES_USER=${DB_USER}        
+      - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
@@ -18,16 +17,16 @@ services:
       retries: 20
       start_period: 30s
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin_ui
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL} 
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD} 
-  #   ports:
-  #     - "5050:80"  # You will access it at http://localhost:8080
-  #   depends_on:
-  #     - postgres
+  neo4j:
+    image: neo4j:5
+    container_name: neo4j_db
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
+    volumes:
+      - neo4j_data:/data
 
   adminer:
     image: adminer
@@ -38,31 +37,13 @@ services:
     depends_on:
       - postgres
 
-  neo4j:
-    image: neo4j:5
-    container_name: neo4j_db
-    networks:
-      default:
-        aliases:
-          - neo4j
-          - neo4j_db
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    environment:
-      - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
-    volumes:
-      - neo4j_data:/data
-
   etl_worker:
-    build: .
+    image: ${APP_IMAGE}
     container_name: etl_worker
+    command: sh /app/src/cron/start_with_cron.sh
     env_file: .env
     volumes:
       - ./data:/app/data
-      - ./src:/app/src
-      - ./config.yaml:/app/config.yaml
-      - ./.env:/app/.env:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,14 +56,10 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
 
   api:
-    build: .
+    image: ${APP_IMAGE}
     container_name: holiday_api
-    command: uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.api.app:app --host 0.0.0.0 --port 8000
     env_file: .env
-    volumes:
-      - ./src:/app/src
-      - ./config.yaml:/app/config.yaml
-      - ./.env:/app/.env:ro
     ports:
       - "8000:8000"
     depends_on:
@@ -96,12 +73,10 @@ services:
       - NEO4J_URI=bolt://neo4j:7687
 
   dashboard:
-    build: .
+    image: ${APP_IMAGE}
     container_name: holiday_dashboard
     command: streamlit run src/api/dashboard.py --server.address 0.0.0.0 --server.port 8501
     env_file: .env
-    volumes:
-      - ./src:/app/src
     ports:
       - "8501:8501"
     depends_on:
@@ -112,6 +87,3 @@ services:
 volumes:
   pg_data:
   neo4j_data:
-
-
-  
