@@ -47,6 +47,7 @@ jobs:
           NEO4J_HOST=neo4j
           NEO4J_PORT=7687
           EOF
+          cp .env.ci .env
 
       - name: Validate Docker Compose file
         run: docker compose --env-file .env.ci config
