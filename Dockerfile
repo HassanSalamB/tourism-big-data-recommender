@@ -2,7 +2,6 @@ FROM python:3.12-slim
 
 # Install system dependencies for the Postgres driver (psycopg2)
 RUN apt-get update && apt-get install -y \
-    cron \
     libpq-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
@@ -18,7 +17,7 @@ ENV PYTHONPATH=/app/src
 # Copy the rest of your code
 COPY . .
 
-# Default worker: install hourly cron and run ETL.
+# Default worker: run ETL immediately, then repeat hourly.
 CMD ["sh", "/app/src/cron/start_with_cron.sh"]
 
 # FastAPI and Streamlit dashboard ports.

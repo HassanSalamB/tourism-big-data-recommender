@@ -23,7 +23,7 @@ python3 -m src.pipeline --silver-full
 ```
 
 When running with Docker Compose, the `etl_worker` container runs that command by default.
-With current Docker setup, `etl_worker` runs one ETL on startup and then runs it every hour via cron.
+With current Docker setup, `etl_worker` runs one ETL immediately on startup and then repeats it every hour.
 
 ## Requirements
 
@@ -95,11 +95,7 @@ Follow the ETL worker logs:
 docker compose logs -f etl_worker
 ```
 
-Check installed cron schedule inside worker:
-
-```bash
-docker compose exec etl_worker crontab -l
-```
+The worker does not wait for a cron tick. It runs immediately, then sleeps for one hour between ETL runs.
 
 Run only selected stages:
 
