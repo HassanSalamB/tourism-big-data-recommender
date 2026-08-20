@@ -59,6 +59,7 @@ target/
 
 # DotEnv configuration
 .env
+distribution/.env.tmp
 
 # Database
 *.db
@@ -78,6 +79,19 @@ target/
 
 # exclude data from source control by default
 /data/
+
+# dbt / analytics outputs
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# Terraform local state and secrets
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
 
 # Mac OS-specific storage files
 .DS_Store

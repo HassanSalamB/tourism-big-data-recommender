@@ -108,7 +108,13 @@ def main():
             # Default is safe test mode; `--silver-full` intentionally processes all changed rows.
             test_mode=not args.silver_full,
             test_limit=5000,
-            batch_size=int(cfg.get("api", {}).get("batch_size", 1000)),
+            batch_size=int(
+                os.getenv(
+                    "SILVER_BATCH_SIZE",
+                    str(cfg.get("api", {}).get("batch_size", 1000)),
+                )
+            ),
+            parquet_batch_size=int(os.getenv("SILVER_PARQUET_BATCH_SIZE", "5000")),
         )
 
     if not args.skip_gold_pg:

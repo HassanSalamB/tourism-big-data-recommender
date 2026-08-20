@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_places
+    columns:
+      - name: place_id
+        tests:
+          - not_null
+          - unique
+      - name: name
+        tests:
+          - not_null
+      - name: lat
+        tests:
+          - not_null
+      - name: lon
+        tests:
+          - not_null
+
+  - name: stg_categories
+    columns:
+      - name: category_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_place_categories
+    columns:
+      - name: place_id
+        tests:
+          - not_null
+      - name: category_id
+        tests:
+          - not_null
+
+  - name: mart_city_summary
+    columns:
+      - name: city
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_city_category_summary
+    columns:
+      - name: city
+        tests:
+          - not_null
+      - name: category_name
+        tests:
+          - not_null

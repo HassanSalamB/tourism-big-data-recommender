@@ -1,0 +1,4 @@
+snowflake_account  = "your-account"
+snowflake_user     = "your-user"
+snowflake_password = "your-password"
+snowflake_role     = "ACCOUNTADMIN"

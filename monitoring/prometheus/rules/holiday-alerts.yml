@@ -1,0 +1,116 @@
+groups:
+  - name: holiday-platform
+    rules:
+      - alert: HolidayApiDown
+        expr: up{job="holiday-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: Holiday API is down
+          description: Prometheus cannot scrape the FastAPI /metrics endpoint.
+
+      - alert: HolidayApiHighErrorRate
+        expr: |
+          sum(rate(holiday_api_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(holiday_api_http_requests_total[5m])), 0.001)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: Holiday API 5xx error rate is above 5 percent
+          description: More than 5 percent of API requests returned server errors over the last 5 minutes.
+
+      - alert: HolidayApiHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, path) (rate(holiday_api_http_request_duration_seconds_bucket[5m]))
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: Holiday API p95 latency is high
+          description: The 95th percentile API latency is above 2 seconds for path {{ $labels.path }}.
+
+      - alert: KafkaPublishFailures
+        expr: increase(holiday_kafka_events_total{status="failed"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: Kafka publish failures detected
+          description: The API failed to publish one or more events to Kafka topic {{ $labels.topic }}.
+
+      - alert: KafkaNoPublishedEventsDuringApiTraffic
+        expr: |
+          sum(increase(holiday_api_http_requests_total{path=~"/weather/current|/generate-itinerary",status_code=~"2..|3.."}[15m])) > 0
+          and
+          sum(increase(holiday_kafka_events_total{status="published"}[15m])) == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: API traffic is not producing Kafka events
+          description: Weather or itinerary requests succeeded, but no Kafka publish success was recorded.
+
+      - alert: KafkaAnalyticsConsumerDown
+        expr: up{job="kafka-analytics-consumer"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: kafka
+        annotations:
+          summary: Kafka analytics consumer is down
+          description: Prometheus cannot scrape the Kafka analytics consumer metrics endpoint.
+
+      - alert: KafkaAnalyticsConsumerErrors
+        expr: increase(holiday_kafka_consumer_errors_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: Kafka analytics consumer errors detected
+          description: The Kafka analytics consumer reported one or more processing errors.
+
+      - alert: KafkaAnalyticsEventsStale
+        expr: |
+          sum(increase(holiday_kafka_events_total{status="published"}[15m])) > 0
+          and
+          sum(increase(holiday_kafka_consumed_events_total[15m])) == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kafka
+        annotations:
+          summary: Kafka events are being published but not consumed
+          description: The API published Kafka events, but the analytics consumer did not consume any events.
+
+      - alert: WeatherProviderFailures
+        expr: sum(increase(holiday_weather_requests_total{status="failed"}[10m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: weather
+        annotations:
+          summary: Weather provider failures are increasing
+          description: More than 3 weather requests failed during the last 10 minutes.
+
+      - alert: ItineraryCategoryMatchLow
+        expr: holiday_itinerary_category_match_rate < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: recommendation
+        annotations:
+          summary: Itinerary category match rate is low
+          description: Fewer than half of selected places match requested categories for {{ $labels.city }}.

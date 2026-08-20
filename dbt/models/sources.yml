@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: app
+    schema: public
+    tables:
+      - name: silver_places
+      - name: silver_categories
+      - name: silver_place_categories
+      - name: gold_clusters

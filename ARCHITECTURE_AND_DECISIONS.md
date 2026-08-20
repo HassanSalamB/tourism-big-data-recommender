@@ -1,45 +1,92 @@
 # Architecture And Decisions
 
-This document explains the current ETL architecture and the main design decisions behind it.
+This document explains the integrated data-platform architecture and the main decisions behind each tool.
 
 ## Project Goal
 
-The project prepares DATAtourisme data for an itinerary application. The app should eventually support questions such as:
-
-- where a user wants to visit
-- what type of POIs they prefer
-- when they want to visit
-- what budget range they care about
-- which nearby/related POIs are useful for itinerary planning
+The project prepares DATAtourisme POI data for an itinerary application. The app should support destination exploration, category preferences, weather-aware planning, graph-based related places, and platform-level observability.
 
 ## Current Architecture
 
 ```text
 DATAtourisme feed
+  -> Airflow orchestration
+  -> Bronze ZIP download
+  -> Bronze content-hash change detection
   -> Bronze Postgres JSONB
   -> Silver Postgres relational tables cleaned with pandas chunks
+  -> Spark city feature generation
   -> Gold Postgres clusters
+  -> dbt analytics marts and tests
   -> Neo4j POI graph
   -> FastAPI service
   -> Streamlit dashboard
+
+Open-Meteo current weather
+  -> FastAPI weather endpoint
+  -> Kafka weather_snapshots topic
+  -> Prometheus metrics
+  -> Grafana KPIs
 ```
 
-The current pipeline entrypoint is:
+The full local platform is started with:
+
+```bash
+docker compose up --build
+```
+
+The stack includes Postgres, Neo4j, Kafka, Spark, Airflow, dbt, FastAPI, Streamlit, Prometheus, and Grafana.
+
+## Why These Tools Are Used
+
+- Airflow: makes pipeline scheduling, retries, task ordering, and run visibility explicit.
+- Postgres: stores local bronze, silver, gold, and dbt marts in one practical database.
+- Neo4j: models POI, city, and category relationships for related-place recommendations.
+- Kafka: captures live platform events such as weather snapshots and generated itinerary requests.
+- Spark: builds city-level feature aggregates from Parquet snapshots, giving the project a scalable batch-processing path.
+- dbt: owns SQL marts and data tests so analytics logic is documented and repeatable.
+- Snowflake: provides the cloud warehouse target for the same dbt models when the project needs shared analytics or BI.
+- Terraform: defines cloud infrastructure such as Snowflake databases, warehouses, schemas, and future managed services.
+- Prometheus: scrapes API/product metrics from `/metrics`.
+- Grafana: visualizes operational and product KPIs from Prometheus.
+
+## Orchestration Layer
+
+Airflow is the pipeline orchestrator. The DAG is:
 
 ```text
-src/pipeline.py
+airflow/dags/holiday_pipeline_dag.py
 ```
+
+Pipeline order:
+
+```text
+bronze_download_zip
+  -> bronze_detect_and_load_changes
+  -> silver_normalize
+  -> spark_city_features
+  -> gold_postgres
+  -> neo4j_graph
+  -> dbt_run_and_test
+```
+
+Decision:
+
+- Airflow is the only scheduler in the active Docker Compose stack.
+- The original `src/pipeline.py` remains the reusable command-line entrypoint for each stage.
+- The bronze download and bronze change-detection/load steps are separate Airflow tasks, so download progress and hash comparison results are visible independently.
+- dbt and Spark are invoked by Airflow so they are part of the actual pipeline path.
 
 ## Bronze Layer
 
-File:
+Files:
 
 ```text
-src/bronze/bronze_loader.py
 src/bronze/data_api.py
+src/bronze/bronze_loader.py
 ```
 
-Primary tables:
+Primary table:
 
 ```text
 bronze_raw_poi
@@ -49,18 +96,14 @@ Bronze responsibilities:
 
 - download the DATAtourisme ZIP feed
 - stream ZIP JSON entries instead of loading the full archive into memory
-- store the raw JSON payload in Postgres `JSONB`
-- compute a stable SHA-256 `content_hash` for each POI
+- store raw POI JSON in Postgres `JSONB`
+- compute a stable SHA-256 `content_hash`
 - insert new rows and update only changed rows
-- skip unchanged POIs
 
-Why Postgres JSONB for bronze:
+Decision:
 
-- DATAtourisme payloads are nested and irregular
-- the raw payload remains replayable for future silver rebuilds
-- bronze, silver, and gold stay in the same database engine
-- hash comparisons can happen close to the data
-- this avoids running MongoDB for this project
+- Postgres JSONB keeps the raw source replayable without adding another document database.
+- Hash comparison makes incremental ingestion cheap and auditable.
 
 ## Silver Layer
 
@@ -82,37 +125,54 @@ silver_prices
 
 Silver responsibilities:
 
-- read only changed bronze rows by comparing hashes
-- map nested fields with declarative path maps stored in `config.yaml`
-- clean data with pandas chunk operations
-- normalize one raw POI into relational tables
-- write a portable Parquet snapshot
-- keep downstream sync timestamps for gold and Neo4j
+- read changed bronze rows by comparing source hashes
+- extract nested DATAtourisme fields using mappings in `config.yaml`
+- normalize places, categories, timings, and prices
+- validate required fields and coordinate ranges
+- write a Parquet snapshot for Spark and portable downstream processing
 
-Silver cleaning rules include:
+Decision:
 
-- load `silver_extraction.text_field_paths` and `silver_extraction.numeric_field_paths` from `config.yaml`
-- keep repeated DATAtourisme path strings outside Python so path tweaks are config-only
-- keep French text first, English as fallback
-- use `dc:description`, `shortDescription`, and `rdfs:comment` for descriptions
-- trim text values and convert empty strings to null
-- convert latitude/longitude to numeric columns
-- reject invalid latitude/longitude ranges
-- reject rows missing `id`, `name`, `lat`, or `lon`
-- explode category lists into bridge rows
-- deduplicate category, timing, and price rows
-- parse timing values into dates/times
-- convert price values to numeric values
+- pandas remains the right local tool for irregular JSON normalization.
+- Spark is used after silver, where the data is already structured and easier to aggregate.
 
-Important decision:
+## Spark Feature Layer
 
-Silver skips unchanged bronze rows using:
+File:
 
 ```text
-bronze_raw_poi.content_hash == silver_places.source_content_hash
+src/spark/city_feature_job.py
 ```
 
-If silver cleaning code changes and the raw bronze hash does not change, run a fresh rebuild if you want old rows reprocessed.
+Output:
+
+```text
+data/gold/spark/city_features
+```
+
+Spark responsibilities:
+
+- read the silver Parquet snapshot
+- generate city-level aggregates such as place counts, region counts, and average coordinates
+- provide a scalable feature-generation path for future ranking and ML work
+
+Spark resource configuration:
+
+```text
+SPARK_WORKER_CORES=2
+SPARK_WORKER_MEMORY=2G
+SPARK_DRIVER_MEMORY=1g
+SPARK_EXECUTOR_MEMORY=1g
+SPARK_EXECUTOR_CORES=1
+SPARK_SQL_SHUFFLE_PARTITIONS=8
+```
+
+These values are intentionally small for a laptop-friendly local cluster. Worker settings are applied in Docker Compose, while driver/executor/shuffle settings are applied when `src/spark/city_feature_job.py` creates the `SparkSession`.
+
+Decision:
+
+- Spark is justified for batch feature generation and future growth.
+- It is not used for the first-pass JSON cleanup because the existing pandas code is simpler and more precise for that step.
 
 ## Gold Postgres Layer
 
@@ -128,24 +188,51 @@ Primary table:
 gold_clusters
 ```
 
-Gold Postgres responsibilities:
+Gold responsibilities:
 
-- trust the cleaned silver layer
-- read silver rows in chunks
 - compute H3 cluster IDs
-- calculate a simple category-based score
-- write cluster summaries for itinerary exploration
-- print a sample itinerary from high-ranked clusters
+- calculate category-based scores
+- write cluster summaries for exploration and reporting
+- mark synced silver rows with `gold_pg_synced_at`
 
-Gold does not repeat silver cleaning rules. For example, it no longer revalidates missing coordinates because that belongs to silver.
+Decision:
 
-Important distinction:
+- `gold_clusters` is an analytics layer, not the live itinerary selector.
+- Live itineraries still use actual POIs from `silver_places`.
 
-- `gold_clusters` uses H3 grid cells, not KMeans
-- `gold_clusters` stores cluster summaries, not full day itineraries
-- the live dashboard itinerary currently reads actual POIs from `silver_places`
+## dbt Analytics Layer
 
-## Gold Neo4j Layer
+Files:
+
+```text
+dbt/dbt_project.yml
+dbt/profiles.yml
+dbt/models/staging/
+dbt/models/marts/
+```
+
+Current models:
+
+```text
+stg_places
+stg_categories
+stg_place_categories
+mart_city_summary
+mart_city_category_summary
+```
+
+dbt responsibilities:
+
+- turn silver data into reusable analytics marts
+- run data tests for unique IDs and required fields
+- provide a Snowflake target for cloud warehouse runs
+
+Decision:
+
+- dbt owns SQL transformations and tests.
+- Python owns API ingestion, nested JSON parsing, and graph loading.
+
+## Neo4j Graph Layer
 
 File:
 
@@ -162,12 +249,40 @@ Graph model:
 
 Neo4j responsibilities:
 
-- create uniqueness constraints for POI, Category, and City nodes
-- stream changed silver rows from Postgres
-- replace refreshed POI nodes so stale relationships disappear
-- mark rows as synced in `silver_places.neo4j_synced_at`
+- maintain POI, City, and Category nodes
+- refresh relationships for changed POIs
+- support related-place suggestions in the itinerary API
 
-Neo4j is used by the app for related-place suggestions. It is not the source of the Streamlit geographic map.
+Decision:
+
+- Graph traversal is a better fit than SQL joins for related-place discovery.
+- Geographic map data still comes from Postgres because coordinates are tabular.
+
+## Kafka Streaming Layer
+
+Code:
+
+```text
+src/streaming/kafka_events.py
+```
+
+Topics:
+
+```text
+weather_snapshots
+itinerary_requests
+```
+
+Kafka responsibilities:
+
+- receive current weather snapshots requested by users
+- receive itinerary generation events
+- create a stream of product behavior that can later feed Spark, dbt marts, or model evaluation
+
+Decision:
+
+- Kafka is used for event-shaped data, not the DATAtourisme ZIP batch feed.
+- API requests do not fail if Kafka briefly restarts; failures are counted in Prometheus.
 
 ## FastAPI And Streamlit App Layer
 
@@ -180,188 +295,129 @@ src/api/dashboard.py
 
 FastAPI responsibilities:
 
-- expose JSON endpoints for the dashboard
-- read dashboard summaries from Postgres
-- read city, category, place, and map data from `silver_places` and related silver tables
-- run request-time KMeans clustering for itinerary days
-- ask Neo4j for related POI suggestions
-- return JSON-safe values to Streamlit
+- expose dashboard JSON endpoints
+- run request-time KMeans itinerary grouping
+- query Neo4j for related POI suggestions
+- request current weather from Open-Meteo
+- publish weather and itinerary events to Kafka
+- expose Prometheus metrics at `/metrics`
 
 Streamlit responsibilities:
 
 - provide the dashboard UI
-- call FastAPI with `requests`
-- show metrics, city/category exploration, maps, and generated itineraries
-- treat selected interests/categories as preferences for itinerary generation
+- call FastAPI over HTTP
+- show data metrics, maps, generated itineraries, and city weather
 
-The dashboard and API communicate through HTTP:
-
-```text
-Streamlit -> FastAPI -> Postgres / Neo4j
-```
-
-Inside Docker Compose, the dashboard reaches the API with:
+Weather endpoint:
 
 ```text
-API_BASE_URL=http://api:8000
+GET /weather/current?city=Paris
 ```
 
-From the host browser:
+Decision:
+
+- Open-Meteo is used because it provides current weather by latitude/longitude without an API key.
+- City coordinates come from the average lat/lon of matching `silver_places`.
+- Weather is useful for future itinerary scoring, such as preferring indoor places during rain.
+
+## Observability Layer
+
+Files:
 
 ```text
-FastAPI docs: http://localhost:8000/docs
-Streamlit:    http://localhost:8501
+monitoring/prometheus/prometheus.yml
+monitoring/grafana/provisioning/
+monitoring/grafana/dashboards/holiday-platform.json
 ```
 
-## Itinerary Generation
-
-The live itinerary flow is separate from `gold_clusters`:
+Metrics exposed by FastAPI:
 
 ```text
-silver_places for selected city
-  -> KMeans on lat/lon
-  -> one cluster per requested day
-  -> nearest POIs to each cluster center
-  -> selected interests/categories lightly preferred
-  -> Neo4j related suggestions
-  -> Streamlit itinerary cards and map
+holiday_api_http_requests_total
+holiday_api_http_request_duration_seconds
+holiday_itineraries_generated_total
+holiday_itinerary_places_selected_total
+holiday_weather_requests_total
+holiday_kafka_events_total
+holiday_itinerary_category_match_rate
+holiday_itinerary_avg_distance_km
+holiday_itinerary_avg_recommendations
+holiday_itinerary_weather_suitability_score
 ```
 
-KMeans is used because the number of clusters depends on the user request. For example, a 3-day trip creates up to 3 geographic groups, while a 5-day trip creates up to 5.
+Prometheus responsibilities:
 
-Selected interests such as Beach, Museum, or Restaurant are preferences, not hard filters. This keeps an itinerary varied: selecting Beach can add beach-related stops, but the planner still fills days with other nearby POIs.
+- scrape API health and product metrics
+- track Kafka publish success/failure counts
+- track itinerary generation volume and latency
+- track itinerary quality signals such as preference match, route compactness, graph recommendation density, and weather suitability
 
-Neo4j does not choose the day clusters. It adds related POI suggestions for places already selected by the Postgres/KMeans flow.
+Grafana responsibilities:
 
-## Incremental Strategy
+- visualize API request rate
+- visualize generated itineraries by city
+- visualize average API latency
+- visualize Kafka event publishing status
 
-Bronze tracks source changes with:
+Decision:
+
+- Prometheus/Grafana are used for both operational reliability and product KPI monitoring.
+- These metrics make the app easier to defend technically because performance and user activity are measurable.
+
+## Snowflake And Terraform
+
+Snowflake is configured as a dbt target in:
 
 ```text
-bronze_raw_poi.content_hash
+dbt/profiles.yml
 ```
 
-Silver remembers which raw hash produced each cleaned row with:
+Terraform starter files:
 
 ```text
-silver_places.source_content_hash
+terraform/examples/snowflake/
 ```
 
-Gold and Neo4j use timestamps:
+Decision:
 
-```text
-silver_places.updated_at
-silver_places.gold_pg_synced_at
-silver_places.neo4j_synced_at
-```
-
-This means:
-
-- bronze skips unchanged raw POIs
-- silver skips unchanged bronze POIs
-- gold Postgres skips if silver has no changes since the last gold sync
-- Neo4j skips if silver has no changes since the last graph sync
-
-## Why Pandas Instead Of PySpark Here
-
-Pandas is used in silver because the current project runs locally/Docker Compose on one machine. It provides familiar DataFrame cleaning without requiring Java or a Spark cluster.
-
-PySpark would be useful later if:
-
-- the data grows far beyond what one machine can handle comfortably
-- the project moves to Databricks, EMR, Dataproc, Synapse, Kubernetes, or another real Spark cluster
-- the team wants to learn distributed processing explicitly
-
-For now, chunked pandas gives a good balance:
-
-- no Java dependency
-- lower setup complexity
-- bounded memory use
-- clear cleaning operations
-
-## Database Tables
-
-Bronze:
-
-```text
-bronze_raw_poi
-```
-
-Silver:
-
-```text
-silver_places
-silver_categories
-silver_place_categories
-silver_timings
-silver_prices
-```
-
-Gold Postgres:
-
-```text
-gold_clusters
-```
-
-Neo4j:
-
-```text
-POI nodes
-City nodes
-Category nodes
-LOCATED_IN relationships
-HAS_CATEGORY relationships
-```
+- local development uses Postgres
+- Snowflake is the warehouse target for cloud analytics
+- Terraform makes Snowflake resources reproducible instead of manually created
 
 ## Service Ports
 
-Postgres:
-
 ```text
-localhost:5432
-```
-
-Adminer:
-
-```text
-http://localhost:5050
-```
-
-Neo4j Browser:
-
-```text
-http://localhost:7474
-```
-
-FastAPI:
-
-```text
-http://localhost:8000/docs
-```
-
-Streamlit:
-
-```text
-http://localhost:8501
-```
-
-Neo4j Bolt:
-
-```text
-bolt://localhost:7687 from the host
-bolt://neo4j:7687 from inside Docker
+FastAPI:     http://localhost:8000/docs
+Streamlit:   http://localhost:8501
+Airflow:     http://localhost:8088
+Prometheus:  http://localhost:9090
+Grafana:     http://localhost:3000
+Spark UI:    http://localhost:8080
+Adminer:     http://localhost:5050
+Neo4j:       http://localhost:7474
+Postgres:    localhost:5432
+Kafka:       localhost:9094 externally, kafka:9092 inside Docker
+Kafka UI:    http://localhost:8090
 ```
 
 ## Current Pipeline Files
 
 ```text
 src/pipeline.py
-src/bronze/bronze_loader.py
 src/bronze/data_api.py
+src/bronze/bronze_loader.py
 src/silver/data_normalizer.py
+src/spark/city_feature_job.py
 src/gold/postgres_warehouse.py
 src/gold/neo4j_graph_loader.py
-src/utils/config.py
-src/utils/connections.py
-src/architecture.mmd
+src/streaming/kafka_events.py
+src/api/app.py
+src/api/dashboard.py
+airflow/dags/holiday_pipeline_dag.py
+dbt/dbt_project.yml
+docker-compose.yml
+Dockerfile.airflow
+monitoring/prometheus/prometheus.yml
+monitoring/grafana/dashboards/holiday-platform.json
+terraform/examples/snowflake/
 ```

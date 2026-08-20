@@ -216,7 +216,13 @@ def _flush_bronze_batch(cursor, pending_items, counts):
         )
 
 
-def ingest_zip_to_postgres(conn, cursor, zip_path: str, batch_size: int = 1000):
+def ingest_zip_to_postgres(
+    conn,
+    cursor,
+    zip_path: str,
+    batch_size: int = 1000,
+    progress_interval: int = 5000,
+):
     counts = {"total": 0, "inserted": 0, "updated": 0, "unchanged": 0}
     pending_items = []
     print("[Bronze API] Loading ZIP contents into Postgres bronze_raw_poi...")
@@ -237,11 +243,12 @@ def ingest_zip_to_postgres(conn, cursor, zip_path: str, batch_size: int = 1000):
 
         _flush_bronze_batch(cursor, pending_items, counts)
         conn.commit()
-        print(
-            f"[Bronze API] Processed {counts['total']} raw objects "
-            f"(new: {counts['inserted']}, changed: {counts['updated']}, "
-            f"unchanged: {counts['unchanged']})..."
-        )
+        if counts["total"] % progress_interval == 0:
+            print(
+                f"[Bronze API] Processed {counts['total']} raw objects "
+                f"(new: {counts['inserted']}, changed: {counts['updated']}, "
+                f"unchanged: {counts['unchanged']})..."
+            )
         pending_items.clear()
 
     _flush_bronze_batch(cursor, pending_items, counts)
@@ -254,7 +261,11 @@ def ingest_zip_to_postgres(conn, cursor, zip_path: str, batch_size: int = 1000):
     return counts
 
 
-def run_bronze_loader(zip_path: str, batch_size: int = 1000) -> dict:
+def run_bronze_loader(
+    zip_path: str,
+    batch_size: int = 1000,
+    progress_interval: int = 5000,
+) -> dict:
     """Load local ZIP into bronze tables (new/changed rows only)."""
     print("[Pipeline] Bronze load: start")
     try:
@@ -273,7 +284,13 @@ def run_bronze_loader(zip_path: str, batch_size: int = 1000) -> dict:
                         "skipped_ingest": True,
                         "counts": {"total": 0, "inserted": 0, "updated": 0, "unchanged": 0},
                     }
-                counts = ingest_zip_to_postgres(conn, cursor, zip_path, batch_size=batch_size)
+                counts = ingest_zip_to_postgres(
+                    conn,
+                    cursor,
+                    zip_path,
+                    batch_size=batch_size,
+                    progress_interval=progress_interval,
+                )
                 mark_bronze_token_filename_ingested(zip_path)
                 print("[Pipeline] Bronze load: done")
                 return {

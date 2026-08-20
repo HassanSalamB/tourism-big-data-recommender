@@ -235,8 +235,10 @@ def run_gold_postgres_dw(h3_resolution: int = 8):
         """
     )
     changed_count = cursor.fetchone()[0]
+    cursor.execute("SELECT to_regclass('public.gold_clusters')")
+    gold_clusters_exists = cursor.fetchone()[0] is not None
     # Gold Postgres is derived from silver, so we can skip the expensive rebuild if nothing changed.
-    if changed_count == 0:
+    if changed_count == 0 and gold_clusters_exists:
         conn.close()
         print("[Gold] Skip: no silver changes since last warehouse sync.")
         print("[Pipeline] Gold Postgres DW: done")

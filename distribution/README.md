@@ -1,47 +1,83 @@
-# Holiday Itinerary Single Compose File
+# Holiday Itinerary Release Distribution
 
-This example is for users who only want to download one Compose file and run the app from Docker Hub.
+This folder is the lightweight distribution path for someone who does not want to clone the development repo.
+
+They need:
+
+- Docker Desktop or Docker Engine
+- this `distribution/` folder
+- `.env` created from `.env.example`
+- published Docker images for the app and Airflow runtime
+
+## Images
+
+The GitHub Actions workflow can publish:
+
+```text
+DOCKERHUB_USERNAME/holiday-itinerary:<branch-or-sha>
+DOCKERHUB_USERNAME/holiday-itinerary-airflow:<branch-or-sha>
+```
+
+The app image runs FastAPI and Streamlit. The Airflow image contains the DAGs, dbt project, Spark job, and ETL source code used by Airflow.
 
 ## Quick Start
 
-1. Download `compose.release.yml`.
+1. Copy the release folder:
 
-2. Create a `.env` file in the same folder:
+```text
+compose.release.yml
+.env.example
+monitoring/
+```
+
+2. Create `.env`:
+
+```bash
+cp .env.example .env
+```
+
+3. Edit these values:
 
 ```env
 APP_IMAGE=your-dockerhub-username/holiday-itinerary:dev
-
-DATATOURISME_TOKEN=your_api_key/your_feed_id
-
-DB_USER=admin
-DB_PASSWORD=root
-DB_NAME=holiday_db
-DB_PORT=5432
-DB_HOST=postgres
-
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=neo4jpassword
-NEO4J_URI=bolt://neo4j:7687
-NEO4J_HOST=neo4j
-NEO4J_PORT=7687
+AIRFLOW_IMAGE=your-dockerhub-username/holiday-itinerary-airflow:dev
+DATATOURISME_TOKEN=your_real_token
 ```
 
-3. Run:
+4. Initialize Airflow:
+
+```bash
+docker compose -f compose.release.yml up airflow-init
+```
+
+5. Start the platform:
 
 ```bash
 docker compose -f compose.release.yml up -d
 ```
 
-4. Open:
+## Open The UIs
 
 ```text
-http://localhost:8501
+Airflow:    http://localhost:8088  admin / admin
+FastAPI:    http://localhost:8000/docs
+Streamlit:  http://localhost:8501
+Spark UI:   http://localhost:8080
+Neo4j:      http://localhost:7474
+Adminer:    http://localhost:5050
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3000  admin / admin
+Kafka UI:   http://localhost:8090
 ```
 
-FastAPI docs:
+## Stop
 
-```text
-http://localhost:8000/docs
+```bash
+docker compose -f compose.release.yml down
 ```
 
-Docker Hub provides the image. Docker Compose runs the containers locally.
+Remove volumes and reset all databases:
+
+```bash
+docker compose -f compose.release.yml down -v
+```

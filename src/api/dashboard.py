@@ -21,19 +21,62 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        :root {
+            color-scheme: light;
+        }
+        html,
+        body,
+        .stApp {
+            background: #ffffff !important;
+            color: #000000 !important;
+        }
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        [data-testid="stSidebar"],
+        section[data-testid="stSidebar"] {
+            background: #ffffff !important;
+            color: #000000 !important;
+        }
         .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+        h1, h2, h3, h4, h5, h6, p, label, span, div {
+            color: #000000 !important;
+        }
         [data-testid="stMetric"] {
-            background: #ffffff;
+            background: #ffffff !important;
             border: 1px solid #d8dee9;
             border-radius: 8px;
             padding: 0.85rem 1rem;
+        }
+        [data-testid="stMetric"] label,
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {
+            color: #000000 !important;
+        }
+        [data-baseweb="select"] > div,
+        [data-baseweb="select"] input,
+        [data-baseweb="tag"],
+        [data-baseweb="slider"],
+        input,
+        textarea {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        .stButton > button {
+            border-radius: 6px;
+        }
+        [data-testid="stDataFrame"],
+        [data-testid="stTable"] {
+            background: #ffffff !important;
+            color: #000000 !important;
         }
         .place-panel {
             border: 1px solid #d8dee9;
             border-radius: 8px;
             padding: 0.8rem 1rem;
             margin-bottom: 0.75rem;
-            background: #ffffff;
+            background: #ffffff !important;
         }
         .muted { color: #667085; font-size: 0.9rem; }
     </style>
@@ -69,6 +112,11 @@ def load_categories():
     return api_get("/categories", limit=300)
 
 
+@st.cache_data(ttl=600)
+def load_weather(city: str):
+    return api_get("/weather/current", city=city)
+
+
 st.title("Holiday Itinerary Dashboard")
 st.caption(f"Connected to `{API_BASE_URL}`")
 
@@ -96,11 +144,12 @@ except requests.RequestException as exc:
     st.exception(exc)
     st.stop()
 
-metric_cols = st.columns(4)
+metric_cols = st.columns(5)
 metric_cols[0].metric("Places", f"{summary['places']:,}")
-metric_cols[1].metric("Cities", f"{summary['cities']:,}")
-metric_cols[2].metric("Categories", f"{summary['categories']:,}")
-metric_cols[3].metric("Gold clusters", f"{summary['clusters']:,}")
+metric_cols[1].metric("Destination communes", f"{summary['cities']:,}")
+metric_cols[2].metric("Popular destinations", f"{summary['popular_destinations']:,}")
+metric_cols[3].metric("Categories", f"{summary['categories']:,}")
+metric_cols[4].metric("Gold clusters", f"{summary['clusters']:,}")
 
 st.divider()
 
@@ -112,10 +161,55 @@ with left:
     if not city_options:
         st.warning("No city data is available yet.")
         st.stop()
-    city = st.selectbox("City", options=city_options, index=0)
-    days = st.slider("Days", min_value=1, max_value=7, value=3)
-    max_places = st.slider("Places per day", min_value=1, max_value=8, value=5)
+    city = st.selectbox("Destination", options=city_options, index=0)
+    days = st.slider("Days", min_value=1, max_value=50, value=3)
+    max_places = st.slider("Places per day", min_value=1, max_value=50, value=5)
     generate = st.button("Generate itinerary", type="primary", width="stretch")
+    refresh_weather = st.button("Refresh live weather", width="stretch")
+
+    if refresh_weather:
+        load_weather.clear()
+
+    try:
+        weather = load_weather(city)
+        weather_cols = st.columns(2)
+        weather_cols[0].metric(
+            "Temperature",
+            (
+                f"{weather['temperature_2m']:.1f} C"
+                if weather.get("temperature_2m") is not None
+                else "n/a"
+            ),
+        )
+        weather_cols[1].metric(
+            "Wind",
+            (
+                f"{weather['wind_speed_10m']:.1f} km/h"
+                if weather.get("wind_speed_10m") is not None
+                else "n/a"
+            ),
+        )
+        detail_cols = st.columns(2)
+        detail_cols[0].metric(
+            "Humidity",
+            (
+                f"{weather['relative_humidity_2m']:.0f}%"
+                if weather.get("relative_humidity_2m") is not None
+                else "n/a"
+            ),
+        )
+        detail_cols[1].metric(
+            "Rain",
+            (
+                f"{weather['rain']:.1f} mm"
+                if weather.get("rain") is not None
+                else "n/a"
+            ),
+        )
+        if weather.get("observed_at"):
+            st.caption(f"Observed at {weather['observed_at']}")
+    except requests.RequestException:
+        st.caption("Weather is currently unavailable.")
 
     st.subheader("Explore")
     selected_categories = st.multiselect(
@@ -130,14 +224,14 @@ with left:
 with right:
     view = st.segmented_control(
         "View",
-        options=["Itinerary", "Places", "Cities"],
+        options=["Itinerary", "Places", "Destinations"],
         default="Itinerary",
         label_visibility="collapsed",
     )
 
     if view == "Itinerary":
         if not city:
-            st.info("No city data is available yet.")
+            st.info("No destination data is available yet.")
         elif generate:
             with st.spinner(
                 "Building itinerary from silver POIs and graph recommendations..."
@@ -184,7 +278,7 @@ with right:
                         day_df.rename(columns={"lat": "latitude", "lon": "longitude"})
                     )
         else:
-            st.info("Choose a city and generate an itinerary.")
+            st.info("Choose a destination and generate an itinerary.")
 
     if view == "Places":
         params = {"city": city, "limit": place_limit}
@@ -211,7 +305,7 @@ with right:
             )
             st.dataframe(table_df, width="stretch", hide_index=True)
 
-    if view == "Cities":
+    if view == "Destinations":
         cities_df = pd.DataFrame(cities)
         st.bar_chart(cities_df.set_index("city")["poi_count"].head(25))
         st.dataframe(cities_df, width="stretch", hide_index=True)

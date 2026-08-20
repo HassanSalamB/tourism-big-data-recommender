@@ -11,6 +11,8 @@ import sys
 import warnings
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from psycopg2.extras import execute_values
 
 if __package__ in (None, ""):
@@ -567,7 +569,7 @@ def _cleanup_orphan_categories(cursor):
     )
 
 
-def _write_silver_parquet(conn, parquet_output: str):
+def _write_silver_parquet(conn, parquet_output: str, batch_size: int = 5000):
     # Parquet is optional: it gives the team a portable analytics snapshot of silver.
     query = """
     SELECT
@@ -587,8 +589,8 @@ def _write_silver_parquet(conn, parquet_output: str):
         p.website,
         MIN(t.start_date) AS start_date,
         MAX(t.end_date) AS end_date,
-        MIN(pr.min_price) AS min_price,
-        MAX(pr.max_price) AS max_price,
+        MIN(pr.min_price)::float AS min_price,
+        MAX(pr.max_price)::float AS max_price,
         MAX(pr.currency) FILTER (WHERE pr.currency IS NOT NULL) AS currency,
         COALESCE(
             ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL),
@@ -616,7 +618,74 @@ def _write_silver_parquet(conn, parquet_output: str):
         p.website
     ORDER BY p.id
     """
-    _query_to_dataframe(conn, query).to_parquet(parquet_output, index=False)
+    temp_output = f"{parquet_output}.tmp"
+    if os.path.exists(temp_output):
+        os.remove(temp_output)
+
+    schema = pa.schema(
+        [
+            ("id", pa.string()),
+            ("source_identifier", pa.string()),
+            ("name", pa.string()),
+            ("lat", pa.float64()),
+            ("lon", pa.float64()),
+            ("address", pa.string()),
+            ("postal_code", pa.string()),
+            ("city", pa.string()),
+            ("region", pa.string()),
+            ("country", pa.string()),
+            ("description", pa.string()),
+            ("contact_email", pa.string()),
+            ("contact_phone", pa.string()),
+            ("website", pa.string()),
+            ("start_date", pa.date32()),
+            ("end_date", pa.date32()),
+            ("min_price", pa.float64()),
+            ("max_price", pa.float64()),
+            ("currency", pa.string()),
+            ("categories", pa.list_(pa.string())),
+        ]
+    )
+    columns = [field.name for field in schema]
+    writer = None
+    rows_written = 0
+    try:
+        with conn.cursor(name="silver_parquet_stream") as stream:
+            stream.itersize = batch_size
+            stream.execute(query)
+
+            while True:
+                rows = stream.fetchmany(batch_size)
+                if not rows:
+                    break
+
+                chunk_df = pd.DataFrame(rows, columns=columns)
+                table = pa.Table.from_pandas(
+                    chunk_df,
+                    schema=schema,
+                    preserve_index=False,
+                )
+                if writer is None:
+                    writer = pq.ParquetWriter(temp_output, schema)
+                writer.write_table(table)
+                rows_written += len(chunk_df)
+                print(f"[Silver] Parquet export wrote {rows_written} rows")
+
+        if writer is None:
+            empty_df = pd.DataFrame(columns=columns if "columns" in locals() else [])
+            pq.write_table(
+                pa.Table.from_pandas(empty_df, schema=schema, preserve_index=False),
+                temp_output,
+            )
+        else:
+            writer.close()
+            writer = None
+        os.replace(temp_output, parquet_output)
+    finally:
+        if writer is not None:
+            writer.close()
+        if os.path.exists(temp_output):
+            os.remove(temp_output)
 
 
 def _bronze_table_exists(cursor) -> bool:
@@ -874,6 +943,7 @@ def run_silver_normalize(
     test_mode: bool = True,
     test_limit: int = 5000,
     batch_size: int = 1000,
+    parquet_batch_size: int = 5000,
 ):
     """Normalize only new/changed bronze records into silver tables."""
     os.makedirs(os.path.dirname(parquet_output) or ".", exist_ok=True)
@@ -963,7 +1033,7 @@ def run_silver_normalize(
         _cleanup_orphan_categories(cursor)
         conn.commit()
 
-        _write_silver_parquet(conn, parquet_output)
+        _write_silver_parquet(conn, parquet_output, batch_size=parquet_batch_size)
         print(
             f"[Silver] DONE: {normalized} changed POIs normalized -> {parquet_output}"
         )

@@ -1,12 +1,12 @@
 # --- API CONFIGURATION ---
 api:
   # The specific DATAtourisme feed URL
-  feed_url: "https://diffuseur.datatourisme.fr/webservice/"
+  feed_url: "https://diffuseur.datatourisme.fr/webservice/f623872a7bed216dca00be98ace3aded/"
   download_retries: 3
   download_wait_seconds: 10
   download_chunk_mb: 1
   progress_log_seconds: 5
-  
+
   # ETL Logic settings
   batch_size: 1000
   silver_table: "normalized_pois"

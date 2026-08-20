@@ -1,0 +1,7 @@
+# Optional analytics dependencies.
+# Install these only when running the dbt/Snowflake/Kafka/Spark extensions.
+dbt-core
+dbt-postgres
+dbt-snowflake
+kafka-python
+pyspark

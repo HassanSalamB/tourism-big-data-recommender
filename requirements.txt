@@ -8,6 +8,8 @@ python-dotenv
 # API & Streaming
 requests
 ijson
+kafka-python
+prometheus-client
 
 # Team 1 (Huzaifa): silver parquet, gold H3, bronze archives
 pandas

@@ -12,6 +12,7 @@ permissions:
 
 env:
   IMAGE_NAME: holiday-itinerary
+  AIRFLOW_IMAGE_NAME: holiday-itinerary-airflow
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -36,6 +37,8 @@ jobs:
         run: |
           cat > .env.ci <<'EOF'
           DATATOURISME_TOKEN=dummy-token
+          APP_IMAGE=holiday-itinerary:ci
+          AIRFLOW_IMAGE=holiday-itinerary-airflow:ci
           DB_USER=admin
           DB_PASSWORD=root
           DB_NAME=holiday_db
@@ -46,14 +49,31 @@ jobs:
           NEO4J_URI=bolt://neo4j:7687
           NEO4J_HOST=neo4j
           NEO4J_PORT=7687
+          KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+          AIRFLOW_UID=50000
+          SNOWFLAKE_ACCOUNT=dummy-account
+          SNOWFLAKE_USER=dummy-user
+          SNOWFLAKE_PASSWORD=dummy-password
+          SNOWFLAKE_ROLE=TRANSFORMER
+          SNOWFLAKE_DATABASE=HOLIDAY_ITINERARY
+          SNOWFLAKE_WAREHOUSE=TRANSFORMING_WH
+          SNOWFLAKE_SCHEMA=ANALYTICS
           EOF
           cp .env.ci .env
 
       - name: Validate Docker Compose file
         run: docker compose --env-file .env.ci config
 
+      - name: Validate release Docker Compose file
+        run: |
+          cp .env.ci distribution/.env
+          docker compose --env-file distribution/.env -f distribution/compose.release.yml config
+
       - name: Build Docker image
         run: docker build -t "${IMAGE_NAME}:ci" .
+
+      - name: Build Airflow Docker image
+        run: docker build -f Dockerfile.airflow -t "${AIRFLOW_IMAGE_NAME}:ci" .
 
   publish:
     name: Publish Docker image
@@ -86,7 +106,7 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push app Docker image
         if: steps.publish.outputs.enabled == 'true'
         uses: docker/build-push-action@v7
         with:
@@ -95,3 +115,14 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Build and push Airflow Docker image
+        if: steps.publish.outputs.enabled == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.airflow
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AIRFLOW_IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.AIRFLOW_IMAGE_NAME }}:${{ github.sha }}

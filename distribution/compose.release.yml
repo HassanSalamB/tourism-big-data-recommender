@@ -28,32 +28,212 @@ services:
     volumes:
       - neo4j_data:/data
 
-  adminer:
-    image: adminer
-    container_name: adminer_ui
-    restart: always
+  kafka:
+    image: bitnamilegacy/kafka:4.0.0-debian-12-r10
+    container_name: holiday_kafka
     ports:
-      - "5050:8080"
-    depends_on:
-      - postgres
-
-  etl_worker:
-    image: ${APP_IMAGE}
-    container_name: etl_worker
-    command: sh /app/src/cron/start_with_cron.sh
-    env_file: .env
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
-      - ./data:/app/data
+      - kafka_data:/bitnami/kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: holiday_kafka_ui
+    ports:
+      - "8090:8080"
     depends_on:
+      - kafka
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=holiday-local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+
+  kafka-analytics-consumer:
+    image: ${APP_IMAGE}
+    container_name: holiday_kafka_analytics_consumer
+    command: python -m src.streaming.analytics_consumer
+    env_file: .env
+    ports:
+      - "9108:9108"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app:/app/src
+      - DB_HOST=postgres
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_ANALYTICS_GROUP_ID=holiday-analytics-consumer
+      - KAFKA_ANALYTICS_OFFSET_RESET=earliest
+      - KAFKA_ANALYTICS_METRICS_PORT=9108
+
+  spark-master:
+    image: bitnamilegacy/spark:4.0.0-debian-12-r20
+    container_name: holiday_spark_master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - holiday_data:/opt/holiday/data
+      - holiday_data:/app/data
+
+  spark-worker:
+    image: bitnamilegacy/spark:4.0.0-debian-12-r20
+    container_name: holiday_spark_worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES:-2}
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-2G}
+    depends_on:
+      - spark-master
+    volumes:
+      - holiday_data:/opt/holiday/data
+      - holiday_data:/app/data
+
+  airflow-postgres:
+    image: postgres:15
+    container_name: holiday_airflow_postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - airflow_pg_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: ${AIRFLOW_IMAGE}
+    container_name: holiday_airflow_init
+    env_file: .env
+    user: "${AIRFLOW_UID:-50000}:0"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - airflow db migrate && airflow users create --username admin --password admin --firstname Local --lastname Admin --role Admin --email admin@example.com || true
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       neo4j:
         condition: service_started
-    tty: true
-    stdin_open: true
+      kafka:
+        condition: service_started
+      spark-master:
+        condition: service_started
+    volumes:
+      - holiday_data:/opt/holiday/data
     environment:
-      - PYTHONUNBUFFERED=1
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - PYTHONPATH=/opt/holiday:/opt/holiday/src
       - NEO4J_URI=bolt://neo4j:7687
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_DRIVER_MEMORY=${SPARK_DRIVER_MEMORY:-1g}
+      - SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY:-1g}
+      - SPARK_EXECUTOR_CORES=${SPARK_EXECUTOR_CORES:-1}
+      - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
+
+  airflow-webserver:
+    image: ${AIRFLOW_IMAGE}
+    container_name: holiday_airflow_webserver
+    command: webserver
+    env_file: .env
+    user: "${AIRFLOW_UID:-50000}:0"
+    ports:
+      - "8088:8080"
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    volumes:
+      - holiday_data:/opt/holiday/data
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - PYTHONPATH=/opt/holiday:/opt/holiday/src
+      - NEO4J_URI=bolt://neo4j:7687
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_DRIVER_MEMORY=${SPARK_DRIVER_MEMORY:-1g}
+      - SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY:-1g}
+      - SPARK_EXECUTOR_CORES=${SPARK_EXECUTOR_CORES:-1}
+      - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
+
+  airflow-scheduler:
+    image: ${AIRFLOW_IMAGE}
+    container_name: holiday_airflow_scheduler
+    command: scheduler
+    env_file: .env
+    user: "${AIRFLOW_UID:-50000}:0"
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+      kafka:
+        condition: service_started
+      spark-master:
+        condition: service_started
+    volumes:
+      - holiday_data:/opt/holiday/data
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - PYTHONPATH=/opt/holiday:/opt/holiday/src
+      - NEO4J_URI=bolt://neo4j:7687
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_DRIVER_MEMORY=${SPARK_DRIVER_MEMORY:-1g}
+      - SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY:-1g}
+      - SPARK_EXECUTOR_CORES=${SPARK_EXECUTOR_CORES:-1}
+      - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
+
+  dbt:
+    image: ${AIRFLOW_IMAGE}
+    container_name: holiday_dbt
+    working_dir: /opt/holiday/dbt
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - while true; do dbt run --profiles-dir . && dbt test --profiles-dir . || true; sleep 900; done
+    environment:
+      - DB_HOST=postgres
+      - DBT_TARGET=postgres
 
   api:
     image: ${APP_IMAGE}
@@ -67,10 +247,13 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_started
+      kafka:
+        condition: service_started
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app:/app/src
       - NEO4J_URI=bolt://neo4j:7687
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
   dashboard:
     image: ${APP_IMAGE}
@@ -84,6 +267,63 @@ services:
     environment:
       - API_BASE_URL=http://api:8000
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: holiday_prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+      - kafka-analytics-consumer
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: holiday_alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: holiday_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - alertmanager
+
+  adminer:
+    image: adminer
+    container_name: adminer_ui
+    restart: always
+    ports:
+      - "5050:8080"
+    depends_on:
+      - postgres
+
 volumes:
   pg_data:
   neo4j_data:
+  kafka_data:
+  airflow_pg_data:
+  holiday_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

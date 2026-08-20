@@ -1,0 +1,404 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(holiday_api_http_requests_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "API requests / sec",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(increase(holiday_itineraries_generated_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Itineraries generated / 24h",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "avg(holiday_itinerary_category_match_rate)",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg category match rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "avg(holiday_itinerary_weather_suitability_score)",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg weather suitability",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum by (path) (rate(holiday_api_http_request_duration_seconds_sum[5m])) / sum by (path) (rate(holiday_api_http_request_duration_seconds_count[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Average API latency by path",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum by (city) (increase(holiday_itineraries_generated_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Itineraries by city",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "holiday_itinerary_category_match_rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Category match rate by city",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "holiday_itinerary_avg_distance_km",
+          "refId": "A"
+        }
+      ],
+      "title": "Average stop distance km by city",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "holiday_itinerary_avg_recommendations",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg graph recommendations per place",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 10,
+      "targets": [
+        {
+          "expr": "sum by (topic, status) (increase(holiday_kafka_events_total[1h]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka publish status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 30
+      },
+      "id": 11,
+      "targets": [
+        {
+          "expr": "sum(increase(holiday_kafka_consumed_events_total[1h]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka consumed events / 1h",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 30
+      },
+      "id": 12,
+      "targets": [
+        {
+          "expr": "sum(increase(holiday_kafka_consumer_errors_total[1h]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka consumer errors / 1h",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 30
+      },
+      "id": 13,
+      "targets": [
+        {
+          "expr": "time() - max(holiday_kafka_latest_event_timestamp_seconds)",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest Kafka event age seconds",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 30
+      },
+      "id": 14,
+      "targets": [
+        {
+          "expr": "sum by (topic) (increase(holiday_kafka_consumed_events_total[1h]))",
+          "refId": "A",
+          "legendFormat": "{{topic}}"
+        }
+      ],
+      "title": "Kafka consumed by topic",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 15,
+      "targets": [
+        {
+          "expr": "topk(10, sum by (city) (increase(holiday_analytics_itinerary_events_total[24h])))",
+          "refId": "A",
+          "legendFormat": "{{city}}"
+        }
+      ],
+      "title": "Consumed itinerary events by city",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 16,
+      "targets": [
+        {
+          "expr": "topk(10, sum by (city) (increase(holiday_analytics_weather_events_total[24h])))",
+          "refId": "A",
+          "legendFormat": "{{city}}"
+        }
+      ],
+      "title": "Consumed weather snapshots by city",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
+      "id": 17,
+      "targets": [
+        {
+          "expr": "holiday_analytics_itinerary_category_match_rate",
+          "refId": "A",
+          "legendFormat": "{{city}}"
+        }
+      ],
+      "title": "Kafka-derived category match rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
+      "id": 18,
+      "targets": [
+        {
+          "expr": "holiday_analytics_weather_temperature_celsius",
+          "refId": "A",
+          "legendFormat": "{{city}}"
+        }
+      ],
+      "title": "Kafka-derived weather temperature",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": [
+    "holiday",
+    "platform"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "title": "Holiday Platform KPIs",
+  "uid": "holiday-platform-kpis",
+  "version": 3
+}

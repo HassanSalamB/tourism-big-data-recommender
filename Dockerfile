@@ -17,8 +17,8 @@ ENV PYTHONPATH=/app/src
 # Copy the rest of your code
 COPY . .
 
-# Default worker: run ETL immediately, then repeat hourly.
-CMD ["sh", "/app/src/cron/start_with_cron.sh"]
+# Default command is a lightweight API process; Compose overrides this for each service.
+CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # FastAPI and Streamlit dashboard ports.
 EXPOSE 8000

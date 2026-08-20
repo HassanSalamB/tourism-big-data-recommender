@@ -1,36 +1,41 @@
 # Holiday Itinerary Data Platform
 
 This project builds a local ETL pipeline for DATAtourisme data. It ingests raw POI JSON into Postgres bronze tables, cleans and normalizes the data into silver tables with pandas chunks, then builds gold outputs for itinerary exploration in Postgres and Neo4j.
-It also runs a FastAPI service and Streamlit dashboard for exploring places and generating itineraries.
+It runs as an integrated data-platform stack with Airflow, Kafka, Spark, dbt, Prometheus, Grafana, FastAPI, and Streamlit.
 
 ## What The Pipeline Does
 
 ```text
 DATAtourisme ZIP feed
+  -> Airflow orchestration
+  -> Bronze ZIP download
+  -> Bronze content-hash change detection
   -> Bronze Postgres JSONB table
-  -> Silver cleaned relational tables
+  -> Silver cleaned relational tables + Parquet snapshot
+  -> Spark city feature generation
   -> Gold Postgres H3 clusters
+  -> dbt analytics marts and tests
   -> Gold Neo4j POI graph
   -> FastAPI + Streamlit itinerary app
+  -> Prometheus + Grafana observability
 ```
 
 The live itinerary generator currently uses cleaned `silver_places` rows and runtime KMeans clustering. The precomputed `gold_clusters` table is an H3-based summary layer used for analytics/dashboard counts, not the direct source of itinerary stops.
 
-The main entrypoint is:
+The reusable pipeline entrypoint is:
 
 ```bash
 python3 -m src.pipeline --silver-full
 ```
 
-When running with Docker Compose, the `etl_worker` container runs that command by default.
-With current Docker setup, `etl_worker` runs one ETL immediately on startup and then repeats it every hour.
+When running with Docker Compose, Airflow is the main orchestrator. It runs the pipeline DAG in series: ZIP download, bronze change detection/load, silver, Spark features, gold Postgres, Neo4j, and dbt tests.
 
 ## Requirements
 
 You need:
 
 - Docker Desktop, recommended for the full project
-- A `.env` file with DATAtourisme, Postgres, and Neo4j settings
+- A `.env` file with DATAtourisme, Postgres, Neo4j, Kafka, Airflow, and Snowflake settings
 - Enough disk space for the DATAtourisme ZIP in `data/raw/`
 
 The project already installs Python dependencies inside the Docker image from `requirements.txt`. Field extraction rules for silver live in `config.yaml` under `silver_extraction.text_field_paths` and `silver_extraction.numeric_field_paths`, so common DATAtourisme path changes do not require editing Python code.
@@ -53,15 +58,32 @@ NEO4J_PASSWORD=neo4jpassword
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_HOST=neo4j
 NEO4J_PORT=7687
+
+KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+AIRFLOW_UID=50000
+
+SPARK_WORKER_CORES=2
+SPARK_WORKER_MEMORY=2G
+SPARK_DRIVER_MEMORY=1g
+SPARK_EXECUTOR_MEMORY=1g
+SPARK_EXECUTOR_CORES=1
+SPARK_SQL_SHUFFLE_PARTITIONS=8
 ```
 
 Notes:
 
 - `DATATOURISME_TOKEN` is used to download the ZIP feed from `https://diffuseur.datatourisme.fr/webservice/`.
 - In Docker, `DB_HOST=postgres` and `NEO4J_URI=bolt://neo4j:7687` are correct because services talk through the Compose network.
+- In Docker, `KAFKA_BOOTSTRAP_SERVERS=kafka:9092` is correct for API event publishing.
 - From your host browser, use `localhost` ports instead.
 
 ## Run With Docker
+
+Initialize Airflow metadata and admin user if this is the first run:
+
+```bash
+docker compose up --build airflow-init
+```
 
 Start the full stack:
 
@@ -75,13 +97,33 @@ Run in the background:
 docker compose up --build -d
 ```
 
-Start only the API and dashboard after the databases are already running:
+Open Airflow and trigger or monitor the `holiday_itinerary_pipeline` DAG:
 
-```bash
-docker compose up --build api dashboard
+```text
+http://localhost:8088
+username: admin
+password: admin
 ```
 
-Generate an itinerary through the API:
+Follow Airflow scheduler logs:
+
+```bash
+docker compose logs -f airflow-scheduler
+```
+
+To see DATAtourisme download progress, open the Airflow task logs for:
+
+```text
+holiday_itinerary_pipeline -> bronze_download_zip
+```
+
+To see key/content-hash comparison counts, open:
+
+```text
+holiday_itinerary_pipeline -> bronze_detect_and_load_changes
+```
+
+Generate an itinerary through the API after silver data is loaded:
 
 ```bash
 curl -X POST http://localhost:8000/generate-itinerary \
@@ -89,26 +131,14 @@ curl -X POST http://localhost:8000/generate-itinerary \
   -d '{"city": "Paris", "days": 3, "max_places_per_day": 5, "categories": ["Beach", "Museum"]}'
 ```
 
-Follow the ETL worker logs:
+Run dbt manually if needed:
 
 ```bash
-docker compose logs -f etl_worker
-```
-
-The worker does not wait for a cron tick. It runs immediately, then sleeps for one hour between ETL runs.
-
-Run only selected stages:
-
-```bash
-docker compose run --rm etl_worker python3 -m src.pipeline --skip-api
+docker compose exec dbt dbt run --profiles-dir .
 ```
 
 ```bash
-docker compose run --rm etl_worker python3 -m src.pipeline --skip-neo4j
-```
-
-```bash
-docker compose run --rm etl_worker python3 -m src.pipeline --skip-api --skip-gold-pg --skip-neo4j --silver-full
+docker compose exec dbt dbt test --profiles-dir .
 ```
 
 ## CI/CD With GitHub Actions
@@ -154,6 +184,38 @@ Streamlit dashboard:
 
 ```text
 http://localhost:8501
+```
+
+Airflow:
+
+```text
+http://localhost:8088
+```
+
+Prometheus:
+
+```text
+http://localhost:9090
+```
+
+Kafka UI:
+
+```text
+http://localhost:8090
+```
+
+Grafana:
+
+```text
+http://localhost:3000
+username: admin
+password: admin
+```
+
+Spark UI:
+
+```text
+http://localhost:8080
 ```
 
 Adminer for Postgres:
@@ -202,7 +264,10 @@ The Streamlit dashboard does not query Postgres or Neo4j directly. It calls Fast
 Streamlit dashboard
   -> FastAPI JSON endpoints
   -> Postgres silver/gold tables
-  -> optional Neo4j recommendations
+  -> Neo4j recommendations
+  -> Open-Meteo weather
+  -> Kafka event publishing
+  -> Prometheus metrics
 ```
 
 Main API endpoints:
@@ -213,6 +278,8 @@ GET  /summary
 GET  /cities
 GET  /categories
 GET  /places
+GET  /weather/current?city=Paris
+GET  /metrics
 POST /generate-itinerary
 ```
 
@@ -223,8 +290,12 @@ POST /generate-itinerary
 - treats selected dashboard interests/categories as preferences, not hard filters
 - fills each day with nearby POIs so one interest such as Beach does not make every stop a beach
 - asks Neo4j for related POI suggestions for the selected itinerary stops
+- publishes an `itinerary.generated` event to Kafka
+- increments Prometheus itinerary metrics
 
 The Streamlit map is based on `silver_places.lat` and `silver_places.lon` returned by FastAPI. Neo4j powers related-place suggestions, not the geographic map.
+
+The weather endpoint publishes weather snapshot events to Kafka and increments Prometheus weather metrics.
 
 ## Fresh Rebuild
 
@@ -378,21 +449,34 @@ gold_pg_synced_at IS NULL OR updated_at > gold_pg_synced_at
 ├── config.yaml
 ├── docker-compose.yml
 ├── Dockerfile
+├── Dockerfile.airflow
 ├── requirements.txt
+├── requirements-analytics.txt
+├── architecture.mmd
+├── airflow/
+├── dbt/
+├── monitoring/
+├── terraform/
 ├── data/
 │   ├── raw/
 │   └── silver/parquet/
 └── src/
     ├── pipeline.py
-    ├── architecture.mmd
     ├── bronze/
     │   ├── bronze_loader.py
     │   └── data_api.py
     ├── silver/
     │   └── data_normalizer.py
+    ├── spark/
+    │   └── city_feature_job.py
     ├── gold/
     │   ├── postgres_warehouse.py
     │   └── neo4j_graph_loader.py
+    ├── streaming/
+    │   └── kafka_events.py
+    ├── api/
+    │   ├── app.py
+    │   └── dashboard.py
     └── utils/
         ├── config.py
         └── connections.py
@@ -403,13 +487,13 @@ gold_pg_synced_at IS NULL OR updated_at > gold_pg_synced_at
 Compile-check Python files inside Docker:
 
 ```bash
-docker compose run --rm --no-deps etl_worker python3 -m py_compile src/pipeline.py src/bronze/bronze_loader.py src/bronze/data_api.py src/silver/data_normalizer.py src/gold/postgres_warehouse.py src/gold/neo4j_graph_loader.py src/utils/config.py src/utils/connections.py
+docker compose run --rm --no-deps api python3 -m py_compile src/pipeline.py src/bronze/bronze_loader.py src/bronze/data_api.py src/silver/data_normalizer.py src/spark/city_feature_job.py src/gold/postgres_warehouse.py src/gold/neo4j_graph_loader.py src/streaming/kafka_events.py src/api/app.py src/api/dashboard.py src/utils/config.py src/utils/connections.py
 ```
 
-Open a shell in the ETL container:
+Open a shell in the API container:
 
 ```bash
-docker compose run --rm etl_worker bash
+docker compose run --rm api bash
 ```
 
 Stop services:
