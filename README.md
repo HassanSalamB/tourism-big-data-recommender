@@ -1,6 +1,6 @@
 # Holiday Itinerary Data Platform
 
-**Public portfolio:** deployment link will appear here after the Render release.
+**[Open the public Holiday Itinerary Data Platform](https://holiday-itinerary-platform.onrender.com/)**
 
 The public Streamlit portfolio presents the original itinerary experience and recorded execution evidence from Airflow, Kafka, Spark, Postgres, Neo4j, FastAPI, Prometheus, and Grafana. The public service uses a clearly labelled curated sample; the complete data platform remains reproducible through Docker Compose.
 
