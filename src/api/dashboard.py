@@ -97,26 +97,26 @@ def home_page() -> None:
         unsafe_allow_html=True,
     )
 
-    st.image(str(ARCHITECTURE_HERO), use_container_width=True)
+    st.image(str(ARCHITECTURE_HERO), width="stretch")
     st.caption("The complete platform at a glance—from DATAtourisme ingestion to the itinerary UI and operational telemetry.")
 
-    st.subheader("Explore live product and engineering evidence")
+    st.subheader("Explore the live product and recorded engineering evidence")
     cols = st.columns(4)
     with cols[0]:
-        st.image(str(SCREENSHOTS / "01-streamlit-dashboard.png"), use_container_width=True)
+        st.image(str(SCREENSHOTS / "01-streamlit-dashboard.png"), width="stretch")
         st.page_link(APP_PAGE, label="Itinerary App", icon="🧭")
     with cols[1]:
-        st.image(str(SCREENSHOTS / "03-airflow-dag-grid.png"), use_container_width=True)
+        st.image(str(SCREENSHOTS / "03-airflow-dag-grid.png"), width="stretch")
         st.page_link(PIPELINE_PAGE, label="Pipeline & Storage", icon="🔄")
     with cols[2]:
-        st.image(str(SCREENSHOTS / "02-fastapi-docs.png"), use_container_width=True)
+        st.image(str(SCREENSHOTS / "02-fastapi-docs.png"), width="stretch")
         st.page_link(SERVING_PAGE, label="Serving & Graph", icon="🔌")
     with cols[3]:
-        st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), use_container_width=True)
+        st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), width="stretch")
         st.page_link(OBSERVABILITY_PAGE, label="Observability", icon="📊")
 
     st.subheader("Three levels of the system")
-    st.image(str(LEVELS_OVERVIEW), use_container_width=True)
+    st.image(str(LEVELS_OVERVIEW), width="stretch")
     st.caption("Serving, incremental ETL, and observability are separated so each layer can evolve and fail independently.")
 
     st.subheader("What this repository demonstrates")
@@ -203,7 +203,7 @@ def itinerary_page() -> None:
 def evidence_panel(name: str, role: str, screenshot: str, source: str) -> None:
     st.subheader(name)
     st.write(role)
-    st.image(str(SCREENSHOTS / screenshot), use_container_width=True)
+    st.image(str(SCREENSHOTS / screenshot), width="stretch")
     st.link_button(f"View {name} implementation", f"{REPOSITORY_URL}/blob/dev/{source}", width="stretch")
 
 
