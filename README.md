@@ -6,6 +6,12 @@ The repository now includes a lightweight hospitality-data vertical slice that c
 
 This is an independent portfolio prototype built with synthetic data and public hospitality concepts. It is not affiliated with Lighthouse and contains no Lighthouse data, code, or confidential information.
 
+**[Open the live Accommodation Intelligence Lab](https://accommodation-intelligence-lab.onrender.com/)**
+
+![Accommodation Intelligence Medallion Architecture](docs/accommodation-medallion-architecture.svg)
+
+The architecture follows one rule: establish identity, lineage, freshness, and quality before serving analytics or AI recommendations. Bronze preserves the evidence, Silver creates trusted accommodation identities, Gold publishes commercial facts, and the serving layer converts those facts into explainable actions for hotel teams.
+
 ```bash
 pip install -r requirements-demo.txt
 streamlit run hospitality_demo/app.py

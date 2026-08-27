@@ -55,6 +55,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.image(
+    str(PROJECT_ROOT / "docs" / "accommodation-medallion-architecture.svg"),
+    use_container_width=True,
+)
+st.caption(
+    "The reviewer path: fragmented hospitality signals → Bronze history → Silver trusted identities "
+    "→ Gold commercial facts → explainable analytics and AI products."
+)
+
 metric_columns = st.columns(5)
 metric_columns[0].metric("Source rows", quality["source_rows"])
 metric_columns[1].metric("Canonical properties", quality["canonical_properties"])
@@ -162,24 +171,18 @@ with quality_tab:
 
 with architecture_tab:
     st.subheader("Architecture and design decisions")
-    st.code(
-        """Source feeds / APIs
-        |
-        v
-Raw immutable observations + source lineage
-        |
-        v
-Normalization -> quality checks -> candidate generation
-        |
-        v
-Explainable entity resolution -> canonical accommodation facts
-        |
-        +--> rate, demand, availability features
-        |
-        v
-Commercial decision rules / ML features -> APIs, analytics, AI products""",
-        language="text",
+    st.image(
+        str(PROJECT_ROOT / "docs" / "accommodation-medallion-architecture.svg"),
+        use_container_width=True,
     )
+
+    architecture_rows = [
+        {"Layer": "Bronze", "Purpose": "Preserve immutable source observations and replayable history", "Core technology": "JSONB / object storage, Kafka"},
+        {"Layer": "Silver", "Purpose": "Normalize, resolve property identities, and enforce quality", "Core technology": "Python, Spark, dbt, Postgres / Parquet"},
+        {"Layer": "Gold", "Purpose": "Publish canonical properties and commercial features", "Core technology": "dbt marts, Postgres, Neo4j"},
+        {"Layer": "Serve", "Purpose": "Deliver evidence-backed decisions to hotel users", "Core technology": "FastAPI, Streamlit, BI / ML"},
+    ]
+    st.dataframe(pd.DataFrame(architecture_rows), width="stretch", hide_index=True)
 
     st.markdown(
         """
