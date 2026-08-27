@@ -1,5 +1,11 @@
 # Holiday Itinerary Data Platform
 
+**Public portfolio:** deployment link will appear here after the Render release.
+
+![Holiday Itinerary Data Platform architecture](docs/holiday-platform-architecture.svg)
+
+The public Streamlit portfolio presents the original itinerary experience, the end-to-end architecture, and recorded execution evidence from Airflow, Kafka, Spark, Postgres, Neo4j, FastAPI, Prometheus, and Grafana. The public service uses a clearly labelled curated sample; the complete data platform remains reproducible through Docker Compose.
+
 This project builds a local ETL pipeline for DATAtourisme data. It ingests raw POI JSON into Postgres bronze tables, cleans and normalizes the data into silver tables with pandas chunks, then builds gold outputs for itinerary exploration in Postgres and Neo4j.
 It runs as an integrated data-platform stack with Airflow, Kafka, Spark, dbt, Prometheus, Grafana, FastAPI, and Streamlit.
 

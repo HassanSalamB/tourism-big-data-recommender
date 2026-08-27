@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: holiday-itinerary-platform
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: dev
+    buildCommand: pip install -r requirements-portfolio.txt
+    startCommand: streamlit run src/api/dashboard.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    healthCheckPath: /_stcore/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PORTFOLIO_DEMO_MODE
+        value: "true"

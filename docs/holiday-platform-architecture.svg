@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850" role="img" aria-labelledby="title desc">
+  <title id="title">Holiday Itinerary Data Platform architecture</title>
+  <desc id="desc">DATAtourisme data flows through Airflow-managed Bronze, Silver, and Gold layers into FastAPI and Streamlit, with Kafka events and Prometheus and Grafana observability.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071723"/><stop offset="1" stop-color="#10363a"/></linearGradient>
+    <linearGradient id="bronze" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9753e"/><stop offset="1" stop-color="#724323"/></linearGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e6eef1"/><stop offset="1" stop-color="#91a8b2"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd56c"/><stop offset="1" stop-color="#c58b14"/></linearGradient>
+    <linearGradient id="serve" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#24ac88"/><stop offset="1" stop-color="#09645a"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-opacity=".28"/></filter>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5 0 9z" fill="#69d4b8"/></marker>
+    <style>
+      .eyebrow{font:700 17px Arial,sans-serif;letter-spacing:3px;fill:#69d4b8}.title{font:700 40px Arial,sans-serif;fill:#f5faf9}.sub{font:400 18px Arial,sans-serif;fill:#adc1c4}.section{font:700 14px Arial,sans-serif;letter-spacing:2px;fill:#8fa9af}.ctd{font:700 24px Arial,sans-serif;fill:#fff}.ctl{font:700 24px Arial,sans-serif;fill:#162c33}.tagd{font:700 13px Arial,sans-serif;letter-spacing:1.5px;fill:#e7f4f1}.tagl{font:700 13px Arial,sans-serif;letter-spacing:1.5px;fill:#304a53}.bd{font:400 15px Arial,sans-serif;fill:#eaf4f1}.bl{font:400 15px Arial,sans-serif;fill:#20353c}.rail{font:700 16px Arial,sans-serif;fill:#eaf5f2}.rails{font:400 14px Arial,sans-serif;fill:#9eb6bb}
+    </style>
+  </defs>
+  <rect width="1600" height="850" rx="28" fill="url(#bg)"/>
+  <circle cx="1470" cy="75" r="220" fill="#19504f" opacity=".25"/>
+  <text x="68" y="65" class="eyebrow">HOLIDAY ITINERARY DATA PLATFORM</text>
+  <text x="68" y="116" class="title">From tourism source data to an observable product</text>
+  <text x="68" y="151" class="sub">One repository demonstrates ingestion, orchestration, transformation, graph modeling, APIs, streaming, and platform operations.</text>
+
+  <text x="68" y="216" class="section">SOURCE &amp; ORCHESTRATION</text>
+  <text x="355" y="216" class="section">MEDALLION DATA FLOW</text>
+  <text x="1305" y="216" class="section">PRODUCT EXPERIENCE</text>
+
+  <g filter="url(#shadow)">
+    <rect x="68" y="248" width="235" height="110" rx="18" fill="#11323c" stroke="#315660"/>
+    <rect x="68" y="385" width="235" height="110" rx="18" fill="#11323c" stroke="#315660"/>
+  </g>
+  <text x="94" y="282" class="tagd">DATATOURISME</text><text x="94" y="316" class="ctd">ZIP source feed</text><text x="94" y="342" class="rails">POIs · categories · prices</text>
+  <text x="94" y="419" class="tagd">AIRFLOW DAG</text><text x="94" y="453" class="ctd">Orchestrate</text><text x="94" y="479" class="rails">schedule · retry · backfill</text>
+  <path d="M186 358V385" stroke="#69d4b8" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M303 440H344" stroke="#69d4b8" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)"><rect x="357" y="248" width="260" height="310" rx="22" fill="url(#bronze)"/></g>
+  <text x="385" y="289" class="tagd">BRONZE · RAW</text><text x="385" y="327" class="ctd">Preserve changes</text>
+  <line x1="385" y1="348" x2="589" y2="348" stroke="#e1ad84" opacity=".7"/>
+  <text x="385" y="386" class="bd">ZIP download + cache</text><text x="385" y="418" class="bd">Content-hash comparison</text><text x="385" y="450" class="bd">Raw JSONB + source IDs</text><text x="385" y="482" class="bd">New / changed / unchanged</text>
+  <rect x="385" y="507" width="204" height="30" rx="10" fill="#5b351f" opacity=".8"/><text x="401" y="528" class="bd">Postgres bronze_raw_poi</text>
+
+  <path d="M617 403H651" stroke="#69d4b8" stroke-width="4" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="665" y="248" width="260" height="310" rx="22" fill="url(#silver)"/></g>
+  <text x="693" y="289" class="tagl">SILVER · TRUSTED</text><text x="693" y="327" class="ctl">Clean &amp; normalize</text>
+  <line x1="693" y1="348" x2="897" y2="348" stroke="#627b84" opacity=".65"/>
+  <text x="693" y="386" class="bl">Chunked pandas cleaning</text><text x="693" y="418" class="bl">Places + categories</text><text x="693" y="450" class="bl">Timings + prices</text><text x="693" y="482" class="bl">Relational quality rules</text>
+  <rect x="693" y="507" width="204" height="30" rx="10" fill="#6e8791" opacity=".75"/><text x="709" y="528" class="bd">Postgres · Parquet</text>
+
+  <path d="M925 403H959" stroke="#69d4b8" stroke-width="4" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="973" y="248" width="260" height="310" rx="22" fill="url(#gold)"/></g>
+  <text x="1001" y="289" class="tagl">GOLD · ANALYTICS</text><text x="1001" y="327" class="ctl">Model &amp; enrich</text>
+  <line x1="1001" y1="348" x2="1205" y2="348" stroke="#816117" opacity=".6"/>
+  <text x="1001" y="386" class="bl">Spark city features</text><text x="1001" y="418" class="bl">H3 cluster summaries</text><text x="1001" y="450" class="bl">dbt staging + marts</text><text x="1001" y="482" class="bl">Neo4j POI relationships</text>
+  <rect x="1001" y="507" width="204" height="30" rx="10" fill="#a67413" opacity=".78"/><text x="1017" y="528" class="bd">Postgres · Neo4j</text>
+
+  <path d="M1233 403H1274" stroke="#69d4b8" stroke-width="4" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="1288" y="248" width="244" height="310" rx="22" fill="url(#serve)"/></g>
+  <text x="1316" y="289" class="tagd">SERVE · EXPERIENCE</text><text x="1316" y="327" class="ctd">Explore &amp; plan</text>
+  <line x1="1316" y1="348" x2="1504" y2="348" stroke="#8be2cb" opacity=".65"/>
+  <text x="1316" y="386" class="bd">FastAPI contracts</text><text x="1316" y="418" class="bd">Itinerary generation</text><text x="1316" y="450" class="bd">Maps + weather</text><text x="1316" y="482" class="bd">Streamlit dashboard</text>
+  <rect x="1316" y="507" width="188" height="30" rx="10" fill="#074d45" opacity=".82"/><text x="1332" y="528" class="bd">API · UI · consumers</text>
+
+  <rect x="68" y="620" width="1464" height="153" rx="22" fill="#0a2029" stroke="#2b4d55"/>
+  <text x="95" y="655" class="section">EVENTS &amp; OPERATIONS CONTROL PLANE</text><line x1="95" y1="674" x2="1505" y2="674" stroke="#294952"/>
+  <circle cx="126" cy="718" r="22" fill="#17424a"/><text x="118" y="726" font-family="Arial" font-size="20" fill="#69d4b8">K</text><text x="163" y="713" class="rail">Kafka events</text><text x="163" y="738" class="rails">weather + itinerary topics</text>
+  <circle cx="493" cy="718" r="22" fill="#17424a"/><text x="486" y="726" font-family="Arial" font-size="20" fill="#69d4b8">P</text><text x="530" y="713" class="rail">Prometheus</text><text x="530" y="738" class="rails">metrics + scrape targets</text>
+  <circle cx="846" cy="718" r="22" fill="#17424a"/><text x="838" y="726" font-family="Arial" font-size="20" fill="#69d4b8">G</text><text x="883" y="713" class="rail">Grafana</text><text x="883" y="738" class="rails">platform + product KPIs</text>
+  <circle cx="1191" cy="718" r="22" fill="#17424a"/><text x="1183" y="726" font-family="Arial" font-size="20" fill="#69d4b8">A</text><text x="1228" y="713" class="rail">Alertmanager</text><text x="1228" y="738" class="rails">rules + failure visibility</text>
+
+  <text x="68" y="818" class="sub">Engineering principle: every data product should be reproducible, inspectable, and observable from source to user.</text>
+</svg>
