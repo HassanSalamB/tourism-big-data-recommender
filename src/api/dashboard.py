@@ -18,7 +18,6 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = PROJECT_ROOT / "artifacts" / "screenshots"
-ARCHITECTURE = PROJECT_ROOT / "docs" / "holiday-platform-architecture.svg"
 REPOSITORY_URL = "https://github.com/HassanSalamB/tourism-big-data-recommender"
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PORTFOLIO_DEMO_MODE = os.getenv("PORTFOLIO_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
@@ -97,20 +96,13 @@ def home_page() -> None:
     )
 
     st.subheader("Explore the project")
-    cols = st.columns(3)
+    cols = st.columns(2)
     with cols[0]:
         st.markdown('<div class="card"><h3>🧭 Live itinerary app</h3><p>Choose a destination and interests, generate a multi-day plan, inspect places, maps, and weather.</p></div>', unsafe_allow_html=True)
         st.page_link(APP_PAGE, label="Open Streamlit experience", icon="↗️")
     with cols[1]:
         st.markdown('<div class="card"><h3>⚙️ Backend services</h3><p>Review real Airflow, Kafka, Spark, Postgres, Neo4j, FastAPI, Prometheus, and Grafana evidence.</p></div>', unsafe_allow_html=True)
         st.page_link(BACKEND_PAGE, label="Tour backend evidence", icon="↗️")
-    with cols[2]:
-        st.markdown('<div class="card"><h3>🗺️ Architecture map</h3><p>Follow data from source ingestion through Bronze, Silver, Gold, APIs, streaming, and observability.</p></div>', unsafe_allow_html=True)
-        st.page_link(ARCHITECTURE_PAGE, label="View the full process", icon="↗️")
-
-    st.subheader("End-to-end system map")
-    st.image(str(ARCHITECTURE), use_container_width=True)
-    st.caption("Airflow coordinates the batch path; Kafka carries events; Prometheus and Grafana close the operational feedback loop.")
 
     st.subheader("What this repository demonstrates")
     capabilities = st.columns(4)
@@ -222,24 +214,6 @@ def backend_page() -> None:
                 st.link_button(f"View {name} implementation", f"{REPOSITORY_URL}/blob/dev/{source}", width="stretch")
 
 
-def architecture_page() -> None:
-    st.title("Architecture & Data Flow")
-    st.caption("The complete process map for the original Holiday Itinerary Data Platform")
-    st.image(str(ARCHITECTURE), use_container_width=True)
-    st.markdown(
-        """
-        ### How to read the platform
-
-        1. **DATAtourisme** lands as immutable Bronze JSONB with content hashes for change detection.
-        2. **Silver** normalization creates queryable places, categories, timings, and prices.
-        3. **Spark, dbt, Postgres, and Neo4j** create analytical and relationship-aware Gold outputs.
-        4. **FastAPI and Streamlit** turn those outputs into itinerary and exploration products.
-        5. **Kafka, Prometheus, Grafana, and Alertmanager** expose events, health, KPIs, and failures.
-        """
-    )
-    st.link_button("Open architecture source", f"{REPOSITORY_URL}/blob/dev/architecture.mmd")
-
-
 def runbook_page() -> None:
     st.title("Run the Complete Platform")
     st.caption("Local engineering runbook for reviewers who want to reproduce the backend")
@@ -261,8 +235,7 @@ def runbook_page() -> None:
 HOME_PAGE = st.Page(home_page, title="Project Home", icon="🏠", default=True)
 APP_PAGE = st.Page(itinerary_page, title="Itinerary App", icon="🧭")
 BACKEND_PAGE = st.Page(backend_page, title="Backend Services", icon="⚙️")
-ARCHITECTURE_PAGE = st.Page(architecture_page, title="Architecture", icon="🗺️")
 RUNBOOK_PAGE = st.Page(runbook_page, title="Runbook", icon="📘")
 
-navigation = st.navigation({"Start": [HOME_PAGE], "Explore": [APP_PAGE, BACKEND_PAGE, ARCHITECTURE_PAGE, RUNBOOK_PAGE]})
+navigation = st.navigation({"Start": [HOME_PAGE], "Explore": [APP_PAGE, BACKEND_PAGE, RUNBOOK_PAGE]})
 navigation.run()
