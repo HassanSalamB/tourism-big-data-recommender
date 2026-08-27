@@ -18,6 +18,8 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = PROJECT_ROOT / "artifacts" / "screenshots"
+ARCHITECTURE_HERO = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-architecture.png"
+LEVELS_OVERVIEW = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-three-levels.png"
 REPOSITORY_URL = "https://github.com/HassanSalamB/tourism-big-data-recommender"
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PORTFOLIO_DEMO_MODE = os.getenv("PORTFOLIO_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
@@ -70,7 +72,7 @@ def platform_data() -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
 def mode_notice() -> None:
     if PORTFOLIO_DEMO_MODE:
         st.markdown(
-            '<div class="notice"><strong>Public portfolio mode.</strong> The interface uses a small curated dataset so the original Streamlit experience remains interactive on Render. The complete DATAtourisme pipeline and backend services are demonstrated with real execution evidence under <strong>Backend Services</strong>.</div>',
+            '<div class="notice"><strong>Public portfolio mode.</strong> The interface uses a small curated dataset so the original Streamlit experience remains interactive on Render. The complete DATAtourisme pipeline and backend services are demonstrated with real execution evidence throughout the system pages.</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -95,14 +97,27 @@ def home_page() -> None:
         unsafe_allow_html=True,
     )
 
-    st.subheader("Explore the project")
-    cols = st.columns(2)
+    st.image(str(ARCHITECTURE_HERO), use_container_width=True)
+    st.caption("The complete platform at a glance—from DATAtourisme ingestion to the itinerary UI and operational telemetry.")
+
+    st.subheader("Explore live product and engineering evidence")
+    cols = st.columns(4)
     with cols[0]:
-        st.markdown('<div class="card"><h3>🧭 Live itinerary app</h3><p>Choose a destination and interests, generate a multi-day plan, inspect places, maps, and weather.</p></div>', unsafe_allow_html=True)
-        st.page_link(APP_PAGE, label="Open Streamlit experience", icon="↗️")
+        st.image(str(SCREENSHOTS / "01-streamlit-dashboard.png"), use_container_width=True)
+        st.page_link(APP_PAGE, label="Itinerary App", icon="🧭")
     with cols[1]:
-        st.markdown('<div class="card"><h3>⚙️ Backend services</h3><p>Review real Airflow, Kafka, Spark, Postgres, Neo4j, FastAPI, Prometheus, and Grafana evidence.</p></div>', unsafe_allow_html=True)
-        st.page_link(BACKEND_PAGE, label="Tour backend evidence", icon="↗️")
+        st.image(str(SCREENSHOTS / "03-airflow-dag-grid.png"), use_container_width=True)
+        st.page_link(PIPELINE_PAGE, label="Pipeline & Storage", icon="🔄")
+    with cols[2]:
+        st.image(str(SCREENSHOTS / "02-fastapi-docs.png"), use_container_width=True)
+        st.page_link(SERVING_PAGE, label="Serving & Graph", icon="🔌")
+    with cols[3]:
+        st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), use_container_width=True)
+        st.page_link(OBSERVABILITY_PAGE, label="Observability", icon="📊")
+
+    st.subheader("Three levels of the system")
+    st.image(str(LEVELS_OVERVIEW), use_container_width=True)
+    st.caption("Serving, incremental ETL, and observability are separated so each layer can evolve and fail independently.")
 
     st.subheader("What this repository demonstrates")
     capabilities = st.columns(4)
@@ -185,33 +200,64 @@ def itinerary_page() -> None:
             st.dataframe(city_frame, width="stretch", hide_index=True)
 
 
-SERVICES = [
-    ("Airflow", "Orchestrates Bronze → Silver → Spark → Gold → graph → dbt", "03-airflow-dag-grid.png", "airflow/dags/holiday_pipeline_dag.py"),
-    ("Kafka", "Carries weather snapshots and itinerary request events", "07-kafka-weather-messages.png", "src/streaming/kafka_events.py"),
-    ("Spark", "Builds distributed city feature outputs", "08-spark-master.png", "src/spark/city_feature_job.py"),
-    ("Postgres", "Stores raw JSONB, normalized relations, clusters, and marts", "16-adminer-postgres-tables.png", "src/gold/postgres_warehouse.py"),
-    ("Neo4j", "Models POI, city, and category relationships", "14-neo4j-browser.png", "src/gold/neo4j_graph_loader.py"),
-    ("FastAPI", "Serves places, destinations, weather, and itineraries", "02-fastapi-docs.png", "src/api/app.py"),
-    ("Prometheus", "Scrapes API and pipeline health metrics", "12-prometheus-targets.png", "monitoring/prometheus/prometheus.yml"),
-    ("Grafana", "Visualizes operational and product KPIs", "11-grafana-kpis.png", "monitoring/grafana/dashboards/holiday-platform.json"),
-]
+def evidence_panel(name: str, role: str, screenshot: str, source: str) -> None:
+    st.subheader(name)
+    st.write(role)
+    st.image(str(SCREENSHOTS / screenshot), use_container_width=True)
+    st.link_button(f"View {name} implementation", f"{REPOSITORY_URL}/blob/dev/{source}", width="stretch")
 
 
-def backend_page() -> None:
-    st.title("Backend Services")
-    st.caption("Recorded execution evidence from the complete Docker Compose platform")
-    st.markdown('<div class="notice"><strong>Honest deployment boundary.</strong> The public Render service hosts Streamlit. The infrastructure below runs through the repository’s Docker Compose environment; each panel links to its implementation and shows evidence from a real local run.</div>', unsafe_allow_html=True)
-    st.markdown('<div class="flow"><strong>INGEST</strong> → <strong>ORCHESTRATE</strong> → <strong>TRANSFORM</strong> → <strong>MODEL</strong> → <strong>SERVE</strong> → <strong>OBSERVE</strong></div>', unsafe_allow_html=True)
+def pipeline_page() -> None:
+    st.title("Pipeline & Storage")
+    st.caption("Level 2 · Incremental ETL, medallion layers, analytical processing, and synchronization")
+    st.markdown('<div class="notice"><strong>Recorded execution evidence.</strong> These services run through the repository’s Docker Compose environment. Every panel below comes from a real local run and links to its implementation.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="flow"><strong>DATATOURISME</strong> → SHA-256 CDC → <strong>BRONZE</strong> → <strong>SILVER</strong> → SPARK / dbt / H3 / NEO4J</div>', unsafe_allow_html=True)
+    left, right = st.columns(2)
+    with left:
+        evidence_panel("Airflow", "Runs the ordered Bronze → Silver → Spark → Gold → graph → dbt workflow with retries and task visibility.", "03-airflow-dag-grid.png", "airflow/dags/holiday_pipeline_dag.py")
+        evidence_panel("Spark", "Builds city-level analytical features from trusted Silver data and writes Parquet outputs.", "08-spark-master.png", "src/spark/city_feature_job.py")
+    with right:
+        evidence_panel("Postgres", "Stores raw JSONB, normalized relational tables, H3 clusters, and dbt marts.", "16-adminer-postgres-tables.png", "src/gold/postgres_warehouse.py")
+        st.subheader("dbt analytics layer")
+        st.write("Defines staging models, city marts, category marts, schema tests, and source contracts.")
+        st.code("dbt run --profiles-dir .\ndbt test --profiles-dir .", language="bash")
+        st.link_button("View dbt models", f"{REPOSITORY_URL}/tree/dev/dbt/models", width="stretch")
 
-    for index in range(0, len(SERVICES), 2):
-        columns = st.columns(2)
-        for column, service in zip(columns, SERVICES[index : index + 2]):
-            name, role, screenshot, source = service
-            with column:
-                st.subheader(name)
-                st.write(role)
-                st.image(str(SCREENSHOTS / screenshot), use_container_width=True)
-                st.link_button(f"View {name} implementation", f"{REPOSITORY_URL}/blob/dev/{source}", width="stretch")
+
+def serving_page() -> None:
+    st.title("Serving, Graph & Events")
+    st.caption("Level 1 · Request lifecycle from user intent to a multi-model itinerary response")
+    st.markdown('<div class="flow"><strong>STREAMLIT</strong> → FastAPI → POSTGRES + KMEANS + NEO4J → RESPONSE + KAFKA EVENTS</div>', unsafe_allow_html=True)
+    left, right = st.columns(2)
+    with left:
+        evidence_panel("FastAPI", "Validates contracts, retrieves Silver POIs, runs preference-aware KMeans grouping, and returns itinerary responses.", "02-fastapi-docs.png", "src/api/app.py")
+        evidence_panel("Neo4j", "Traverses POI → City and POI → Category relationships to enrich stops with related-place recommendations.", "14-neo4j-browser.png", "src/gold/neo4j_graph_loader.py")
+    with right:
+        evidence_panel("Streamlit", "Collects preferences and presents itineraries, maps, weather, destinations, and place details.", "01-streamlit-dashboard.png", "src/api/dashboard.py")
+        evidence_panel("Kafka", "Publishes weather snapshots and itinerary-generated events without blocking the user request.", "07-kafka-weather-messages.png", "src/streaming/kafka_events.py")
+
+
+def observability_page() -> None:
+    st.title("Observability & Product Quality")
+    st.caption("Level 3 · Operational telemetry, product-quality metrics, dashboards, and alerts")
+    st.markdown('<div class="flow"><strong>FASTAPI + PIPELINE METRICS</strong> → PROMETHEUS → GRAFANA → ALERTMANAGER</div>', unsafe_allow_html=True)
+    left, right = st.columns(2)
+    with left:
+        evidence_panel("Prometheus", "Scrapes request volume, latency, itinerary quality, weather suitability, route distance, and service health.", "12-prometheus-targets.png", "monitoring/prometheus/prometheus.yml")
+    with right:
+        evidence_panel("Grafana", "Combines operational and product KPIs into an engineer-facing platform dashboard.", "11-grafana-kpis.png", "monitoring/grafana/dashboards/holiday-platform.json")
+    st.subheader("Metrics that answer both ‘is it healthy?’ and ‘is it useful?’")
+    metric_table = pd.DataFrame(
+        [
+            ("holiday_api_http_request_duration_seconds", "Operational", "API latency by endpoint"),
+            ("holiday_itinerary_category_match_rate", "Product", "Preference alignment"),
+            ("holiday_itinerary_avg_distance_km", "Product", "Route efficiency"),
+            ("holiday_itinerary_weather_suitability_score", "Product", "Weather-aware suitability"),
+        ],
+        columns=["Metric", "Domain", "Decision supported"],
+    )
+    st.dataframe(metric_table, width="stretch", hide_index=True)
+    st.link_button("View alert rules", f"{REPOSITORY_URL}/blob/dev/monitoring/prometheus/rules/holiday-alerts.yml")
 
 
 def runbook_page() -> None:
@@ -234,8 +280,15 @@ def runbook_page() -> None:
 
 HOME_PAGE = st.Page(home_page, title="Project Home", icon="🏠", default=True)
 APP_PAGE = st.Page(itinerary_page, title="Itinerary App", icon="🧭")
-BACKEND_PAGE = st.Page(backend_page, title="Backend Services", icon="⚙️")
+PIPELINE_PAGE = st.Page(pipeline_page, title="Pipeline & Storage", icon="🔄")
+SERVING_PAGE = st.Page(serving_page, title="Serving & Graph", icon="🔌")
+OBSERVABILITY_PAGE = st.Page(observability_page, title="Observability", icon="📊")
 RUNBOOK_PAGE = st.Page(runbook_page, title="Runbook", icon="📘")
 
-navigation = st.navigation({"Start": [HOME_PAGE], "Explore": [APP_PAGE, BACKEND_PAGE, RUNBOOK_PAGE]})
+navigation = st.navigation(
+    {
+        "Start": [HOME_PAGE],
+        "Explore": [APP_PAGE, PIPELINE_PAGE, SERVING_PAGE, OBSERVABILITY_PAGE, RUNBOOK_PAGE],
+    }
+)
 navigation.run()
