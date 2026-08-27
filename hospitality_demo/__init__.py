@@ -1,0 +1,1 @@
+"""Lightweight accommodation intelligence demo."""

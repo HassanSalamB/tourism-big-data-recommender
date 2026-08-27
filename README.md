@@ -1,5 +1,18 @@
 # Holiday Itinerary Data Platform
 
+## Reviewer Demo: Accommodation Intelligence Lab
+
+The repository now includes a lightweight hospitality-data vertical slice that can be reviewed without starting the complete Airflow/Kafka/Spark stack. It resolves synthetic accommodation observations from multiple providers into canonical properties, exposes match evidence and data-quality issues, and generates explainable rate, demand, and availability actions.
+
+This is an independent portfolio prototype built with synthetic data and public hospitality concepts. It is not affiliated with Lighthouse and contains no Lighthouse data, code, or confidential information.
+
+```bash
+pip install -r requirements-demo.txt
+streamlit run hospitality_demo/app.py
+```
+
+See [`hospitality_demo/README.md`](hospitality_demo/README.md) for the quick start and [`docs/ACCOMMODATION_INTELLIGENCE_CASE_STUDY.md`](docs/ACCOMMODATION_INTELLIGENCE_CASE_STUDY.md) for the engineering decisions and five-minute reviewer walkthrough.
+
 This project builds a local ETL pipeline for DATAtourisme data. It ingests raw POI JSON into Postgres bronze tables, cleans and normalizes the data into silver tables with pandas chunks, then builds gold outputs for itinerary exploration in Postgres and Neo4j.
 It runs as an integrated data-platform stack with Airflow, Kafka, Spark, dbt, Prometheus, Grafana, FastAPI, and Streamlit.
 

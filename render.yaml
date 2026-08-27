@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: accommodation-intelligence-lab
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: dev
+    buildCommand: pip install -r requirements-demo.txt
+    startCommand: streamlit run hospitality_demo/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    healthCheckPath: /_stcore/health
+    autoDeployTrigger: checksPass
