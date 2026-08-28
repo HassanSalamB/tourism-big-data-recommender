@@ -144,6 +144,11 @@ st.markdown(
       .system-row {display:grid; grid-template-columns:12px 1fr auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--line); color:#5f716e; font-size:.83rem;}
       .system-row i {width:7px; height:7px; border-radius:50%; background:#19a984; box-shadow:0 0 9px rgba(25,169,132,.35);}
       .system-row strong {color:#087862; font:800 .65rem ui-monospace,monospace; text-transform:uppercase;}
+      .proof-grid {display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:1rem;}
+      .proof-card {min-height:210px; padding:23px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(145deg,#fff,#f4f8f7); box-shadow:0 12px 30px rgba(9,48,47,.06);}
+      .proof-card small {color:#087862; font:900 .66rem ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase;}
+      .proof-card h3 {color:#123d3a; margin:.75rem 0 .6rem; font-size:1.08rem;}
+      .proof-card p {color:#5f716e; font-size:.88rem; line-height:1.58; margin:0;}
       .command-cell strong em {color:#087862; font-style:normal;}
       .sidebar-brand-card {margin:.2rem .45rem 1rem; padding:1rem; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.04);}
       .sidebar-brand-card strong {display:block; color:#f3fcf9; font-size:.9rem;}
@@ -159,6 +164,7 @@ st.markdown(
         .signal {border-bottom:0; padding:8px 0;}
         .section-heading {grid-template-columns:1fr; gap:9px;}
         .stage-grid {grid-template-columns:repeat(2,1fr);}
+        .proof-grid {grid-template-columns:1fr;}
       }
       @media (max-width:640px) {
         .block-container {padding-top:.8rem;}
@@ -248,9 +254,11 @@ def section_heading(kicker: str, title: str, description: str) -> None:
 
 def home_page() -> None:
     try:
-        summary, cities, _ = platform_data()
+        summary, _, _ = platform_data()
     except requests.RequestException:
-        summary, cities = demo_summary(), demo_cities()
+        summary = demo_summary()
+
+    city_count_label = "city" if summary["cities"] == 1 else "cities"
 
     st.markdown(
         """
@@ -283,7 +291,7 @@ def home_page() -> None:
         f"""
         <div class="command-strip">
           <div class="command-cell"><span>Places indexed</span><strong><em>{summary['places']:,}</em></strong></div>
-          <div class="command-cell"><span>Destinations</span><strong>{summary['cities']:,} cities</strong></div>
+          <div class="command-cell"><span>Destinations</span><strong>{summary['cities']:,} {city_count_label}</strong></div>
           <div class="command-cell"><span>Decision layer</span><strong>{summary['clusters']:,} Gold clusters</strong></div>
           <div class="command-cell"><span>Runtime</span><strong><em>Live</em> on Render</strong></div>
         </div>
@@ -292,30 +300,20 @@ def home_page() -> None:
     )
 
     section_heading(
-        "Live data surface",
-        "Destination intelligence at a glance",
-        "A populated operational view replaces the empty landing experience: inspect coverage now, then open the planner to build a complete trip.",
+        "Platform capabilities",
+        "What the live system demonstrates",
+        "The hosted experience focuses on the product and engineering capabilities that are genuinely implemented, without presenting sample records as destination coverage.",
     )
-    coverage, readiness = st.columns([0.64, 0.36], gap="large")
-    with coverage:
-        with st.container(border=True):
-            st.markdown('<div class="panel-label">Destination coverage · top cities</div>', unsafe_allow_html=True)
-            coverage_frame = pd.DataFrame(cities).nlargest(8, "poi_count")
-            st.bar_chart(coverage_frame.set_index("city")["poi_count"], color="#71f7c5")
-    with readiness:
-        st.markdown(
-            """
-            <div class="dashboard-panel">
-              <div class="panel-label">System readiness</div>
-              <h3>Decision platform</h3>
-              <div class="system-row"><i></i><span>Curated tourism dataset</span><strong>Ready</strong></div>
-              <div class="system-row"><i></i><span>Preference-aware planner</span><strong>Ready</strong></div>
-              <div class="system-row"><i></i><span>Weather context</span><strong>Live</strong></div>
-              <div class="system-row"><i></i><span>Engineering evidence</span><strong>Verified</strong></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        """
+        <div class="proof-grid">
+          <article class="proof-card"><small>01 · Govern</small><h3>Trusted tourism data</h3><p>Airflow ingestion, change detection and Bronze–Silver–Gold transformations preserve source history while creating usable place and city models.</p></article>
+          <article class="proof-card"><small>02 · Decide</small><h3>Explainable trip planning</h3><p>The live planner combines interests, place categories, weather context and graph relationships to produce an itinerary a reviewer can inspect.</p></article>
+          <article class="proof-card"><small>03 · Operate</small><h3>Production evidence</h3><p>Architecture, pipeline runs, API behavior, events, metrics and runbooks show how the product is delivered and monitored beyond the interface.</p></article>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     section_heading(
         "System architecture",
