@@ -4,7 +4,7 @@ A tourism intelligence project that turns DATAtourisme records into trusted loca
 
 **[Open the portfolio](https://holiday-itinerary-platform.onrender.com/)** · **[Project guide](docs/PROJECT_GUIDE.md)** · **[Deployment runbook](docs/PROXMOX_DEPLOYMENT.md)**
 
-![Holiday Itinerary Data Platform](docs/assets/holiday-platform-architecture.png)
+![Three levels of the Holiday Itinerary Data Platform](docs/assets/holiday-platform-three-levels.png)
 
 ## How it works
 
@@ -17,6 +17,12 @@ DATAtourisme → Airflow → Bronze / Silver / Gold → Spark + dbt + Neo4j
 - PostgreSQL, Parquet, H3, and Neo4j support analytical and geographic use cases.
 - FastAPI and Streamlit turn the data into an itinerary product.
 - Kafka, Prometheus, Grafana, and Alertmanager expose runtime behavior.
+
+### Spark and dbt in the processing layer
+
+![Spark and dbt processing architecture](docs/assets/level-2-spark-dbt-architecture.svg)
+
+Spark performs distributed feature engineering over trusted Silver snapshots. dbt builds tested, documented SQL marts. Both publish decision-ready Gold assets for the API, graph, and product layers.
 
 ## Current availability
 

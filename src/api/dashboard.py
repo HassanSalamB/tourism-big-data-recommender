@@ -35,6 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = PROJECT_ROOT / "artifacts" / "screenshots"
 ARCHITECTURE_HERO = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-architecture.png"
 LEVELS_OVERVIEW = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-three-levels.png"
+PROCESSING_ARCHITECTURE = PROJECT_ROOT / "docs" / "assets" / "level-2-spark-dbt-architecture.svg"
 REPOSITORY_URL = "https://github.com/HassanSalamB/tourism-big-data-recommender"
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PORTFOLIO_DEMO_MODE = os.getenv("PORTFOLIO_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
@@ -53,6 +54,15 @@ st.markdown(
       .hero small {color:#67d4b8; font-weight:700; letter-spacing:.16em;}
       .hero h2 {color:#fff; font-size:2.55rem; line-height:1.13; margin:.65rem 0 .85rem; max-width:900px;}
       .hero p {color:#c9ddda; font-size:1.08rem; line-height:1.7; max-width:900px; margin:0;}
+      .command-strip {display:grid; grid-template-columns:repeat(4,1fr); gap:1px; overflow:hidden; margin:.7rem 0 1.5rem; border:1px solid #d7e5e1; border-radius:16px; background:#d7e5e1;}
+      .command-cell {background:#fff; padding:16px 18px;}
+      .command-cell span {display:block; color:#71827f; font-size:.7rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase;}
+      .command-cell strong {display:block; color:#123d3a; font-size:1.08rem; margin-top:.22rem;}
+      .section-lead {max-width:850px; color:#60736f; margin-top:-.35rem; margin-bottom:1rem;}
+      .level-card {min-height:150px; padding:20px; border:1px solid #d7e5e1; border-radius:16px; background:#fff; box-shadow:0 10px 28px rgba(9,48,47,.06);}
+      .level-card small {color:#0a826b; font-weight:800; letter-spacing:.1em;}
+      .level-card h3 {color:#123d3a; font-size:1.05rem; margin:.55rem 0 .38rem;}
+      .level-card p {color:#5f716e; font-size:.88rem; line-height:1.5; margin:0;}
       .card {min-height:145px; padding:20px; border:1px solid #dce6e3; border-radius:16px; background:#f8fbfa;}
       .card h3 {font-size:1.08rem; color:#123d3a; margin:0 0 .5rem;}
       .card p {font-size:.92rem; color:#536765; margin:0;}
@@ -74,6 +84,7 @@ st.markdown(
         .hero h2 {font-size:1.9rem; line-height:1.16;}
         .hero p {font-size:.98rem; line-height:1.55;}
         .stage {min-height:auto; margin-bottom:.6rem;}
+        .command-strip {grid-template-columns:repeat(2,1fr);}
       }
     </style>
     """,
@@ -143,10 +154,43 @@ def home_page() -> None:
     with primary_actions[2]:
         st.link_button("Review source on GitHub", REPOSITORY_URL, icon="↗", width="stretch")
 
-    st.markdown("### The platform in one view")
+    st.markdown(
+        f"""
+        <div class="command-strip">
+          <div class="command-cell"><span>Product</span><strong>Live on Render</strong></div>
+          <div class="command-cell"><span>Backend</span><strong>{BACKEND_STATUS.title()} evidence</strong></div>
+          <div class="command-cell"><span>Data contract</span><strong>Bronze → Silver → Gold</strong></div>
+          <div class="command-cell"><span>Platform scope</span><strong>18 coordinated services</strong></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### Explore the architecture by level")
+    st.markdown('<p class="section-lead">Start with the product request, follow the incremental data pipeline, then inspect how the platform measures health and recommendation quality.</p>', unsafe_allow_html=True)
     with st.container(border=True):
-        st.image(str(ARCHITECTURE_HERO), width="stretch")
-    st.caption("Airflow coordinates medallion processing, Spark and dbt create decision features, FastAPI serves the product, and Grafana closes the operational feedback loop.")
+        st.image(str(LEVELS_OVERVIEW), width="stretch")
+    level_columns = st.columns(3)
+    level_content = [
+        ("LEVEL 1", "Request serving", "Streamlit captures intent; FastAPI combines PostgreSQL, runtime clustering and Neo4j context."),
+        ("LEVEL 2", "Processing & analytics", "Airflow governs incremental ETL while Spark and dbt build complementary decision features."),
+        ("LEVEL 3", "Observability", "Prometheus, Grafana and Alertmanager track both service health and product usefulness."),
+    ]
+    for column, (level, heading, description) in zip(level_columns, level_content):
+        with column:
+            st.markdown(f'<div class="level-card"><small>{level}</small><h3>{heading}</h3><p>{description}</p></div>', unsafe_allow_html=True)
+    level_actions = st.columns(3)
+    with level_actions[0]:
+        st.page_link(SERVING_PAGE, label="Open serving level", icon="🔌", width="stretch")
+    with level_actions[1]:
+        st.page_link(PIPELINE_PAGE, label="Open processing level", icon="⚙️", width="stretch")
+    with level_actions[2]:
+        st.page_link(OBSERVABILITY_PAGE, label="Open observability level", icon="📊", width="stretch")
+
+    st.markdown("### Level 2 deep dive: Spark + dbt")
+    st.markdown('<p class="section-lead">They are not duplicate tools: Spark performs scalable feature computation over trusted snapshots; dbt produces tested SQL marts and explicit analytical contracts.</p>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.image(str(PROCESSING_ARCHITECTURE), width="stretch")
 
     st.markdown("### From source data to a decision")
     stages = st.columns(4)
@@ -191,10 +235,10 @@ def home_page() -> None:
         st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), width="stretch")
         st.page_link(OBSERVABILITY_PAGE, label="Inspect Grafana & metrics", icon="📊", width="stretch")
 
-    st.subheader("Three engineering levels")
+    st.subheader("Complete system topology")
     with st.container(border=True):
-        st.image(str(LEVELS_OVERVIEW), width="stretch")
-    st.caption("Serving, incremental ETL, and observability are separated so each layer can evolve and fail independently.")
+        st.image(str(ARCHITECTURE_HERO), width="stretch")
+    st.caption("The detailed topology connects orchestration, medallion storage, feature processing, graph enrichment, serving, events and operational feedback.")
 
     st.subheader("What a reviewer can validate")
     capabilities = st.columns(4)
@@ -242,7 +286,7 @@ def itinerary_page() -> None:
             st.caption("Weather is currently unavailable.")
 
     with right:
-        view = st.segmented_control("View", ["Itinerary", "Places", "Destinations"], default="Itinerary", label_visibility="collapsed")
+        view = st.segmented_control("View", ["Itinerary", "Map & places", "Destinations"], default="Itinerary", label_visibility="collapsed")
         if view == "Itinerary":
             if not generate:
                 st.info("Choose a destination and generate an itinerary.")
@@ -255,20 +299,23 @@ def itinerary_page() -> None:
                     st.markdown(f"### Day {day['day']}")
                     if not day["places"]:
                         st.caption("No additional places are available for this day in the selected sample.")
+                    day_frame = pd.DataFrame(day["places"])
+                    if not day_frame.empty:
+                        st.caption(f"Day {day['day']} route map · zoom or open fullscreen to explore")
+                        st.map(day_frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
                     for place in day["places"]:
                         st.markdown(
                             f'<div class="place-panel"><strong>{place["start_time"]}–{place["end_time"]} · {place["name"]}</strong><div class="muted">{", ".join(place["categories"][:3])}</div><div>{place.get("address", "")}</div><div class="muted">Related: {", ".join(place["recommendations"])}</div></div>',
                             unsafe_allow_html=True,
                         )
-                    day_frame = pd.DataFrame(day["places"])
-                    if not day_frame.empty:
-                        st.map(day_frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
-        elif view == "Places":
+        elif view == "Map & places":
             places = demo_places(city, selected_categories) if PORTFOLIO_DEMO_MODE else api_get("/places", city=city, limit=50, categories=selected_categories or None)
             frame = pd.DataFrame(places)
             if frame.empty:
                 st.info("No places match the selected filters.")
             else:
+                st.subheader(f"Explore {city} on the map")
+                st.caption("Zoom, pan, or open fullscreen; the table below provides the corresponding place details.")
                 st.map(frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
                 st.dataframe(frame[["name", "city", "address", "categories", "website"]], width="stretch", hide_index=True)
         else:
@@ -292,6 +339,10 @@ def pipeline_page() -> None:
     st.caption("Level 2 · Incremental ETL, medallion layers, analytical processing, and synchronization")
     backend_status_notice()
     st.markdown('<div class="flow"><strong>DATATOURISME</strong> → SHA-256 CDC → <strong>BRONZE</strong> → <strong>SILVER</strong> → SPARK / dbt / H3 / NEO4J</div>', unsafe_allow_html=True)
+    st.subheader("Processing and analytics architecture")
+    st.write("Spark and dbt branch from the trusted Silver layer, solve different transformation problems, and converge in the Gold decision layer.")
+    with st.container(border=True):
+        st.image(str(PROCESSING_ARCHITECTURE), width="stretch")
     left, right = st.columns(2)
     with left:
         evidence_panel("Airflow", "Runs the ordered Bronze → Silver → Spark → Gold → graph → dbt workflow with retries and task visibility.", "03-airflow-dag-grid.png", "airflow/dags/holiday_pipeline_dag.py", "airflow")

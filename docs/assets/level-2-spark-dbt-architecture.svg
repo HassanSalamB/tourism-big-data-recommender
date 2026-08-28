@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 760" role="img" aria-labelledby="title desc">
+  <title id="title">Level 2 processing and analytics architecture</title>
+  <desc id="desc">Airflow orchestrates DATAtourisme change detection, Bronze and Silver layers, then parallel Spark feature engineering and dbt analytics before Gold decision products are synchronized to serving systems.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071923"/>
+      <stop offset="0.55" stop-color="#0a2e30"/>
+      <stop offset="1" stop-color="#0b1d2c"/>
+    </linearGradient>
+    <linearGradient id="airflow" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#0f625c"/>
+      <stop offset="1" stop-color="#0c3e4b"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#9d431f"/>
+      <stop offset="1" stop-color="#572b22"/>
+    </linearGradient>
+    <linearGradient id="dbt" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#9d6530"/>
+      <stop offset="1" stop-color="#563e25"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#73621a"/>
+      <stop offset="1" stop-color="#38371c"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#001014" flood-opacity="0.46"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#8ce8d0"/>
+    </marker>
+    <style>
+      .label{font:700 18px Inter,Arial,sans-serif;letter-spacing:2.5px;fill:#6ee0c1}
+      .title{font:700 38px Inter,Arial,sans-serif;fill:#f4fbf9}
+      .sub{font:400 18px Inter,Arial,sans-serif;fill:#a8c5c0}
+      .node-title{font:700 22px Inter,Arial,sans-serif;fill:#fff}
+      .node-sub{font:400 15px Inter,Arial,sans-serif;fill:#c6d9d5}
+      .pill{font:700 13px Inter,Arial,sans-serif;letter-spacing:1px;fill:#daf8ef}
+      .line{fill:none;stroke:#8ce8d0;stroke-width:4;marker-end:url(#arrow)}
+      .dash{fill:none;stroke:#4f9c8e;stroke-width:2;stroke-dasharray:8 8}
+    </style>
+  </defs>
+
+  <rect width="1600" height="760" rx="34" fill="url(#bg)"/>
+  <circle cx="1450" cy="95" r="280" fill="#1cae8c" opacity="0.07"/>
+  <circle cx="1040" cy="720" r="340" fill="#ff8c42" opacity="0.055"/>
+
+  <text x="72" y="72" class="label">LEVEL 2 · PROCESSING &amp; ANALYTICS</text>
+  <text x="72" y="120" class="title">Two engines, one governed decision layer</text>
+  <text x="72" y="156" class="sub">Spark computes scalable features. dbt turns trusted SQL into tested, documented analytical marts.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="196" width="1456" height="82" rx="20" fill="url(#airflow)" stroke="#5bd7ba" stroke-width="2"/>
+    <circle cx="124" cy="237" r="22" fill="#5bd7ba" opacity="0.18"/>
+    <path d="M113 237h22M124 226v22" stroke="#bdf8e9" stroke-width="4" stroke-linecap="round"/>
+    <text x="166" y="232" class="node-title">Apache Airflow orchestration</text>
+    <text x="166" y="258" class="node-sub">Schedules, retries and exposes the complete Bronze → Silver → Spark / dbt → Gold lineage</text>
+    <rect x="1282" y="217" width="205" height="39" rx="20" fill="#0a272d" stroke="#68d7bd"/>
+    <text x="1384" y="242" text-anchor="middle" class="pill">CONTROL PLANE</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="340" width="228" height="142" rx="20" fill="#123342" stroke="#438aa0" stroke-width="2"/>
+    <text x="98" y="380" class="pill">SOURCE</text>
+    <text x="98" y="417" class="node-title">DATAtourisme</text>
+    <text x="98" y="445" class="node-sub">ZIP archives + SHA-256</text>
+    <text x="98" y="467" class="node-sub">incremental change detection</text>
+
+    <rect x="356" y="340" width="228" height="142" rx="20" fill="#123342" stroke="#438aa0" stroke-width="2"/>
+    <text x="382" y="380" class="pill">BRONZE</text>
+    <text x="382" y="417" class="node-title">Raw JSONB</text>
+    <text x="382" y="445" class="node-sub">Immutable source fidelity</text>
+    <text x="382" y="467" class="node-sub">and replayable ingestion</text>
+
+    <rect x="640" y="340" width="228" height="142" rx="20" fill="#123342" stroke="#438aa0" stroke-width="2"/>
+    <text x="666" y="380" class="pill">SILVER</text>
+    <text x="666" y="417" class="node-title">Trusted entities</text>
+    <text x="666" y="445" class="node-sub">Normalized Postgres tables</text>
+    <text x="666" y="467" class="node-sub">plus Parquet snapshots</text>
+  </g>
+
+  <path d="M300 411H345" class="line"/>
+  <path d="M584 411H629" class="line"/>
+  <path d="M868 387H916V358H948" class="line"/>
+  <path d="M868 435H916V506H948" class="line"/>
+
+  <g filter="url(#shadow)">
+    <rect x="960" y="312" width="300" height="126" rx="22" fill="url(#spark)" stroke="#ff9254" stroke-width="2"/>
+    <text x="988" y="350" class="pill">DISTRIBUTED COMPUTE</text>
+    <text x="988" y="387" class="node-title">Apache Spark</text>
+    <text x="988" y="414" class="node-sub">City aggregation · feature engineering</text>
+
+    <rect x="960" y="460" width="300" height="126" rx="22" fill="url(#dbt)" stroke="#f2ad63" stroke-width="2"/>
+    <text x="988" y="498" class="pill">ANALYTICS ENGINEERING</text>
+    <text x="988" y="535" class="node-title">dbt</text>
+    <text x="988" y="562" class="node-sub">SQL marts · tests · source contracts</text>
+  </g>
+
+  <path d="M1260 375H1308V410H1336" class="line"/>
+  <path d="M1260 523H1308V450H1336" class="line"/>
+
+  <g filter="url(#shadow)">
+    <rect x="1348" y="340" width="180" height="174" rx="22" fill="url(#gold)" stroke="#d6be4b" stroke-width="2"/>
+    <text x="1374" y="381" class="pill">GOLD</text>
+    <text x="1374" y="418" class="node-title">Decision layer</text>
+    <text x="1374" y="447" class="node-sub">H3 clusters</text>
+    <text x="1374" y="470" class="node-sub">city + category marts</text>
+    <text x="1374" y="493" class="node-sub">Neo4j relationships</text>
+  </g>
+
+  <path d="M186 482V640H1420V526" class="dash"/>
+  <rect x="374" y="624" width="850" height="64" rx="18" fill="#0b252d" stroke="#356c68"/>
+  <text x="799" y="650" text-anchor="middle" class="pill">PUBLISHED TO THE DATA PRODUCT</text>
+  <text x="799" y="675" text-anchor="middle" class="node-sub">FastAPI · Streamlit · Neo4j · Kafka events · Prometheus/Grafana</text>
+</svg>
