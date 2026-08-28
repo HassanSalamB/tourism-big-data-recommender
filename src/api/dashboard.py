@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -10,7 +9,6 @@ from typing import Any
 import pandas as pd
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 try:
     from src.api.dashboard_demo import WEATHER, demo_categories, demo_cities, demo_itinerary, demo_places, demo_summary
@@ -198,76 +196,6 @@ def platform_data() -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
     if PORTFOLIO_DEMO_MODE:
         return demo_summary(), demo_cities(), demo_categories()
     return api_get("/summary"), api_get("/cities", limit=100), api_get("/categories", limit=300)
-
-
-def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
-    """Render the original light map style without Streamlit's Chrome WebGL issue."""
-    points: list[dict[str, Any]] = []
-    for _, row in frame.iterrows():
-        lat = row.get("lat", row.get("latitude"))
-        lon = row.get("lon", row.get("longitude"))
-        if pd.isna(lat) or pd.isna(lon):
-            continue
-        points.append(
-            {
-                "lat": float(lat),
-                "lon": float(lon),
-                "name": str(row.get("name", f"Stop {len(points) + 1}")),
-                "order": len(points) + 1,
-            }
-        )
-
-    if not points:
-        st.info("No mapped locations are available for this selection.")
-        return
-
-    payload = json.dumps(points, ensure_ascii=True).replace("<", "\\u003c")
-    components.html(
-        f"""
-        <!doctype html>
-        <html><head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width,initial-scale=1" />
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
-          <style>
-            html,body,#map{{height:100%;margin:0;background:#eef1f3}}
-            #map{{border:1px solid #d2dfdb;border-radius:12px;overflow:hidden}}
-            .leaflet-popup-content{{font:600 13px system-ui;color:#173d39}}
-          </style>
-        </head><body>
-          <div id="map" aria-label="Interactive itinerary map"></div>
-          <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
-          <script>
-            const points = {payload};
-            const map = L.map('map', {{scrollWheelZoom: false, zoomControl: true}});
-            L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-              maxZoom: 19,
-              subdomains: 'abcd',
-              attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-            }}).addTo(map);
-            const bounds = [];
-            points.forEach((point) => {{
-              const marker = L.circleMarker([point.lat, point.lon], {{
-                radius: 13,
-                color: '#c94f18',
-                weight: 3,
-                fillColor: '#ff6b35',
-                fillOpacity: .92
-              }}).addTo(map);
-              const popup = document.createElement('div');
-              popup.textContent = `${{point.order.toString().padStart(2,'0')}} · ${{point.name}}`;
-              marker.bindPopup(popup);
-              bounds.push([point.lat, point.lon]);
-            }});
-            if (points.length > 1) {{
-              map.fitBounds(bounds, {{padding:[28,28], maxZoom:14}});
-            }} else {{ map.setView(bounds[0], 13); }}
-          </script>
-        </body></html>
-        """,
-        height=height,
-        scrolling=False,
-    )
 
 
 def mode_notice() -> None:
@@ -591,7 +519,7 @@ def itinerary_page() -> None:
                     day_frame = pd.DataFrame(day["places"])
                     if not day_frame.empty:
                         st.caption(f"Day {day['day']} route map · zoom or open fullscreen to explore")
-                        render_interactive_map(day_frame)
+                        st.map(day_frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
                     for place in day["places"]:
                         st.markdown(
                             f'<div class="place-panel"><strong>{place["start_time"]}–{place["end_time"]} · {place["name"]}</strong><div class="muted">{", ".join(place["categories"][:3])}</div><div>{place.get("address", "")}</div><div class="muted">Related: {", ".join(place["recommendations"])}</div></div>',
@@ -607,7 +535,7 @@ def itinerary_page() -> None:
             else:
                 st.subheader(f"Explore {city} on the map")
                 st.caption("Zoom, pan, or open fullscreen; the table below provides the corresponding place details.")
-                render_interactive_map(frame, height=440)
+                st.map(frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
                 st.dataframe(frame[["name", "city", "address", "categories", "website"]], width="stretch", hide_index=True)
         else:
             city_frame = pd.DataFrame(cities)
