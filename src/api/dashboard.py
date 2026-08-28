@@ -50,10 +50,13 @@ st.markdown(
       .block-container {max-width: 1280px; padding-top: 1.25rem; padding-bottom: 3rem;}
       [data-testid="stSidebar"] {border-right: 1px solid #dce7e4; background:#f7faf9;}
       [data-testid="stMetric"] {border: 1px solid #dce5e3; border-radius: 12px; padding: 12px 16px; background: #fff;}
-      .hero {padding: 42px 44px; border-radius: 24px; color: #effaf7; background: radial-gradient(circle at 92% 8%,rgba(54,211,172,.18),transparent 32%),linear-gradient(135deg,#061721,#0a3c3a); margin:.4rem 0 1.1rem; box-shadow:0 18px 45px rgba(5,28,35,.14);}
+      .hero {padding: 34px 40px; border-radius: 22px; color: #effaf7; background: radial-gradient(circle at 92% 8%,rgba(54,211,172,.18),transparent 32%),linear-gradient(135deg,#061721,#0a3c3a); margin:.35rem 0 .8rem; box-shadow:0 18px 45px rgba(5,28,35,.14);}
       .hero small {color:#67d4b8; font-weight:700; letter-spacing:.16em;}
-      .hero h2 {color:#fff; font-size:2.55rem; line-height:1.13; margin:.65rem 0 .85rem; max-width:900px;}
-      .hero p {color:#c9ddda; font-size:1.08rem; line-height:1.7; max-width:900px; margin:0;}
+      .hero h2 {color:#fff; font-size:2.25rem; line-height:1.12; margin:.55rem 0 .65rem; max-width:900px;}
+      .hero p {color:#c9ddda; font-size:1.02rem; line-height:1.58; max-width:900px; margin:0;}
+      .demo-focus {text-align:center; padding:6px 0 10px;}
+      .demo-focus h3 {font-size:1.35rem; color:#123d3a; margin:.15rem 0 .15rem;}
+      .demo-focus p {color:#61736f; margin:0 auto .45rem; max-width:680px; line-height:1.45;}
       .command-strip {display:grid; grid-template-columns:repeat(4,1fr); gap:1px; overflow:hidden; margin:.7rem 0 1.5rem; border:1px solid #d7e5e1; border-radius:16px; background:#d7e5e1;}
       .command-cell {background:#fff; padding:16px 18px;}
       .command-cell span {display:block; color:#71827f; font-size:.7rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase;}
@@ -78,10 +81,11 @@ st.markdown(
       .muted {color:#667875; font-size:.9rem;}
       .flow {padding:18px; border-radius:15px; background:#0b222b; color:#eaf5f2; line-height:2; text-align:center; margin:1rem 0;}
       .flow strong {color:#69d5b9;}
+      .architecture-caption {color:#5f716e; font-size:.95rem; line-height:1.55; margin:.15rem 0 1rem;}
       @media (max-width: 640px) {
         .block-container {padding-top:1rem;}
-        .hero {padding:28px 25px; border-radius:19px;}
-        .hero h2 {font-size:1.9rem; line-height:1.16;}
+        .hero {padding:24px 22px; border-radius:19px;}
+        .hero h2 {font-size:1.75rem; line-height:1.16;}
         .hero p {font-size:.98rem; line-height:1.55;}
         .stage {min-height:auto; margin-bottom:.6rem;}
         .command-strip {grid-template-columns:repeat(2,1fr);}
@@ -146,13 +150,26 @@ def home_page() -> None:
         unsafe_allow_html=True,
     )
 
-    primary_actions = st.columns([1, 1, 1.15])
-    with primary_actions[0]:
-        st.page_link(APP_PAGE, label="Launch interactive demo", icon="🧭", width="stretch")
-    with primary_actions[1]:
-        st.page_link(PIPELINE_PAGE, label="Inspect the data platform", icon="🔄", width="stretch")
-    with primary_actions[2]:
-        st.link_button("Review source on GitHub", REPOSITORY_URL, icon="↗", width="stretch")
+    st.markdown(
+        """
+        <div class="demo-focus">
+          <h3>Live product demo</h3>
+          <p>Open the Streamlit itinerary app first, then inspect the architecture and backend evidence if you want to go deeper.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    live_left, live_center, live_right = st.columns([0.28, 0.44, 0.28])
+    with live_center:
+        st.page_link(APP_PAGE, label="Open live itinerary demo", icon="🧭", width="stretch")
+
+    st.subheader("Complete system architecture")
+    st.markdown(
+        '<p class="architecture-caption">This is the end-to-end view: ingestion, orchestration, medallion storage, Spark/dbt processing, graph enrichment, serving, streaming events and observability.</p>',
+        unsafe_allow_html=True,
+    )
+    with st.container(border=True):
+        st.image(str(ARCHITECTURE_HERO), width="stretch")
 
     st.markdown(
         f"""
@@ -166,31 +183,13 @@ def home_page() -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Explore the architecture by level")
-    st.markdown('<p class="section-lead">Start with the product request, follow the incremental data pipeline, then inspect how the platform measures health and recommendation quality.</p>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.image(str(LEVELS_OVERVIEW), width="stretch")
-    level_columns = st.columns(3)
-    level_content = [
-        ("LEVEL 1", "Request serving", "Streamlit captures intent; FastAPI combines PostgreSQL, runtime clustering and Neo4j context."),
-        ("LEVEL 2", "Processing & analytics", "Airflow governs incremental ETL while Spark and dbt build complementary decision features."),
-        ("LEVEL 3", "Observability", "Prometheus, Grafana and Alertmanager track both service health and product usefulness."),
-    ]
-    for column, (level, heading, description) in zip(level_columns, level_content):
-        with column:
-            st.markdown(f'<div class="level-card"><small>{level}</small><h3>{heading}</h3><p>{description}</p></div>', unsafe_allow_html=True)
-    level_actions = st.columns(3)
-    with level_actions[0]:
-        st.page_link(SERVING_PAGE, label="Open serving level", icon="🔌", width="stretch")
-    with level_actions[1]:
-        st.page_link(PIPELINE_PAGE, label="Open processing level", icon="⚙️", width="stretch")
-    with level_actions[2]:
-        st.page_link(OBSERVABILITY_PAGE, label="Open observability level", icon="📊", width="stretch")
-
-    st.markdown("### Level 2 deep dive: Spark + dbt")
-    st.markdown('<p class="section-lead">They are not duplicate tools: Spark performs scalable feature computation over trusted snapshots; dbt produces tested SQL marts and explicit analytical contracts.</p>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.image(str(PROCESSING_ARCHITECTURE), width="stretch")
+    quick_actions = st.columns([1, 1, 1])
+    with quick_actions[0]:
+        st.page_link(ARCHITECTURE_PAGE, label="View architecture details", icon="🧱", width="stretch")
+    with quick_actions[1]:
+        st.page_link(PIPELINE_PAGE, label="Inspect backend evidence", icon="🔄", width="stretch")
+    with quick_actions[2]:
+        st.link_button("Review source on GitHub", REPOSITORY_URL, icon="↗", width="stretch")
 
     st.markdown("### From source data to a decision")
     stages = st.columns(4)
@@ -235,17 +234,71 @@ def home_page() -> None:
         st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), width="stretch")
         st.page_link(OBSERVABILITY_PAGE, label="Inspect Grafana & metrics", icon="📊", width="stretch")
 
-    st.subheader("Complete system topology")
-    with st.container(border=True):
-        st.image(str(ARCHITECTURE_HERO), width="stretch")
-    st.caption("The detailed topology connects orchestration, medallion storage, feature processing, graph enrichment, serving, events and operational feedback.")
-
     st.subheader("What a reviewer can validate")
     capabilities = st.columns(4)
     capabilities[0].metric("Architecture", "18 services")
     capabilities[1].metric("Data quality", "Bronze → Gold")
     capabilities[2].metric("Data product", "API + UI")
     capabilities[3].metric("Operations", "Events + SLOs")
+
+
+def architecture_page() -> None:
+    st.title("Architecture Details")
+    st.caption("Detailed platform design for reviewers who want levels, processing flow, and validation path")
+    backend_status_notice()
+
+    st.markdown("### Complete system topology")
+    st.markdown(
+        '<p class="architecture-caption">The top-level architecture connects the user-facing product to the data platform and engineering evidence behind it.</p>',
+        unsafe_allow_html=True,
+    )
+    with st.container(border=True):
+        st.image(str(ARCHITECTURE_HERO), width="stretch")
+
+    overview_tab, processing_tab, validation_tab = st.tabs(["Architecture levels", "Spark + dbt layer", "Reviewer path"])
+
+    with overview_tab:
+        st.subheader("Three engineering levels")
+        st.markdown(
+            '<p class="section-lead">Level 1 serves the product, Level 2 builds governed decision features, and Level 3 measures reliability and product quality.</p>',
+            unsafe_allow_html=True,
+        )
+        st.image(str(LEVELS_OVERVIEW), width="stretch")
+        level_columns = st.columns(3)
+        level_content = [
+            ("LEVEL 1", "Request serving", "Streamlit captures intent; FastAPI combines PostgreSQL, runtime clustering and Neo4j context."),
+            ("LEVEL 2", "Processing & analytics", "Airflow governs incremental ETL while Spark and dbt build complementary decision features."),
+            ("LEVEL 3", "Observability", "Prometheus, Grafana and Alertmanager track both service health and product usefulness."),
+        ]
+        for column, (level, heading, description) in zip(level_columns, level_content):
+            with column:
+                st.markdown(f'<div class="level-card"><small>{level}</small><h3>{heading}</h3><p>{description}</p></div>', unsafe_allow_html=True)
+
+    with processing_tab:
+        st.subheader("Level 2: Spark + dbt")
+        st.markdown(
+            '<p class="section-lead">Spark and dbt are not duplicate tools: Spark performs scalable feature computation over trusted snapshots; dbt produces tested SQL marts and explicit analytical contracts.</p>',
+            unsafe_allow_html=True,
+        )
+        st.image(str(PROCESSING_ARCHITECTURE), width="stretch")
+        spark_col, dbt_col = st.columns(2)
+        with spark_col:
+            st.markdown('<div class="card"><h3>Apache Spark</h3><p>Computes destination and city-level features from trusted Silver data, then writes analytical snapshots for downstream models and marts.</p></div>', unsafe_allow_html=True)
+        with dbt_col:
+            st.markdown('<div class="card"><h3>dbt</h3><p>Turns warehouse tables into tested marts with documented contracts, making Gold outputs easier to validate and reuse.</p></div>', unsafe_allow_html=True)
+
+    with validation_tab:
+        st.subheader("Recommended reviewer path")
+        st.write("Start with the live itinerary app, then inspect the evidence pages that map each product capability to the backend implementation.")
+        path_cols = st.columns(4)
+        with path_cols[0]:
+            st.page_link(APP_PAGE, label="Live demo", icon="🧭", width="stretch")
+        with path_cols[1]:
+            st.page_link(PIPELINE_PAGE, label="Pipeline evidence", icon="🔄", width="stretch")
+        with path_cols[2]:
+            st.page_link(SERVING_PAGE, label="Serving evidence", icon="🔌", width="stretch")
+        with path_cols[3]:
+            st.page_link(OBSERVABILITY_PAGE, label="Observability", icon="📊", width="stretch")
 
 
 def itinerary_page() -> None:
@@ -414,6 +467,7 @@ def runbook_page() -> None:
 
 HOME_PAGE = st.Page(home_page, title="Project Home", icon="🏠", default=True)
 APP_PAGE = st.Page(itinerary_page, title="Itinerary App", icon="🧭")
+ARCHITECTURE_PAGE = st.Page(architecture_page, title="Architecture Details", icon="🧱")
 PIPELINE_PAGE = st.Page(pipeline_page, title="Pipeline & Storage", icon="🔄")
 SERVING_PAGE = st.Page(serving_page, title="Serving & Graph", icon="🔌")
 OBSERVABILITY_PAGE = st.Page(observability_page, title="Observability", icon="📊")
@@ -422,7 +476,7 @@ RUNBOOK_PAGE = st.Page(runbook_page, title="Runbook", icon="📘")
 navigation = st.navigation(
     {
         "Start": [HOME_PAGE],
-        "Explore": [APP_PAGE, PIPELINE_PAGE, SERVING_PAGE, OBSERVABILITY_PAGE, RUNBOOK_PAGE],
+        "Explore": [APP_PAGE, ARCHITECTURE_PAGE, PIPELINE_PAGE, SERVING_PAGE, OBSERVABILITY_PAGE, RUNBOOK_PAGE],
     }
 )
 navigation.run()
