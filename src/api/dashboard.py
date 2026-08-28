@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from src.api.dashboard_demo import WEATHER, demo_categories, demo_cities, demo_itinerary, demo_places, demo_summary
@@ -148,6 +150,10 @@ st.markdown(
       .sidebar-brand-card {margin:.2rem .45rem 1rem; padding:1rem; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.04);}
       .sidebar-brand-card strong {display:block; color:#f3fcf9; font-size:.9rem;}
       .sidebar-brand-card span {display:block; margin-top:.28rem; color:#8db1aa; font:700 .6rem ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase;}
+      .weather-grid {display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:1rem;}
+      .weather-card {min-width:0; padding:12px; border:1px solid var(--line); border-radius:11px; background:#fff;}
+      .weather-card span {display:block; overflow:hidden; color:#71827f; font-size:.68rem; text-overflow:ellipsis; white-space:nowrap;}
+      .weather-card strong {display:block; margin-top:.28rem; color:#173d39; font-size:clamp(.9rem,1.5vw,1.15rem); line-height:1.2; white-space:nowrap;}
       @media (max-width:900px) {
         .portfolio-hero {grid-template-columns:1fr; padding:38px;}
         .hero-panel {display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
@@ -192,6 +198,72 @@ def platform_data() -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
     if PORTFOLIO_DEMO_MODE:
         return demo_summary(), demo_cities(), demo_categories()
     return api_get("/summary"), api_get("/cities", limit=100), api_get("/categories", limit=300)
+
+
+def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
+    """Render a Leaflet map without relying on Streamlit's WebGL map path."""
+    points: list[dict[str, Any]] = []
+    for _, row in frame.iterrows():
+        lat = row.get("lat", row.get("latitude"))
+        lon = row.get("lon", row.get("longitude"))
+        if pd.isna(lat) or pd.isna(lon):
+            continue
+        points.append(
+            {
+                "lat": float(lat),
+                "lon": float(lon),
+                "name": str(row.get("name", f"Stop {len(points) + 1}")),
+                "order": len(points) + 1,
+            }
+        )
+
+    if not points:
+        st.info("No mapped locations are available for this selection.")
+        return
+
+    payload = json.dumps(points, ensure_ascii=True).replace("<", "\\u003c")
+    components.html(
+        f"""
+        <!doctype html>
+        <html><head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width,initial-scale=1" />
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+          <style>
+            html,body,#map{{height:100%;margin:0;background:#e8efed}}
+            #map{{border:1px solid #d2dfdb;border-radius:12px;overflow:hidden}}
+            .leaflet-popup-content{{font:600 13px system-ui;color:#173d39}}
+          </style>
+        </head><body>
+          <div id="map" aria-label="Interactive itinerary map"></div>
+          <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+          <script>
+            const points = {payload};
+            const map = L.map('map', {{scrollWheelZoom: false, zoomControl: true}});
+            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }}).addTo(map);
+            const bounds = [];
+            points.forEach((point) => {{
+              const marker = L.circleMarker([point.lat, point.lon], {{
+                radius: 8, color: '#087f75', weight: 2, fillColor: '#64dfbd', fillOpacity: .92
+              }}).addTo(map);
+              const popup = document.createElement('div');
+              popup.textContent = `${{point.order.toString().padStart(2,'0')}} · ${{point.name}}`;
+              marker.bindPopup(popup);
+              bounds.push([point.lat, point.lon]);
+            }});
+            if (points.length > 1) {{
+              L.polyline(bounds, {{color:'#087f75', weight:3, opacity:.7, dashArray:'6 7'}}).addTo(map);
+              map.fitBounds(bounds, {{padding:[28,28], maxZoom:14}});
+            }} else {{ map.setView(bounds[0], 13); }}
+          </script>
+        </body></html>
+        """,
+        height=height,
+        scrolling=False,
+    )
 
 
 def mode_notice() -> None:
@@ -490,9 +562,10 @@ def itinerary_page() -> None:
 
             try:
                 weather = WEATHER[city] if PORTFOLIO_DEMO_MODE else api_get("/weather/current", city=city)
-                weather_cols = st.columns(2)
-                weather_cols[0].metric("Temperature", f"{weather['temperature_2m']:.1f} °C")
-                weather_cols[1].metric("Wind", f"{weather['wind_speed_10m']:.1f} km/h")
+                st.markdown(
+                    f'<div class="weather-grid"><div class="weather-card"><span>Temperature</span><strong>{weather["temperature_2m"]:.1f} °C</strong></div><div class="weather-card"><span>Wind speed</span><strong>{weather["wind_speed_10m"]:.1f} km/h</strong></div></div>',
+                    unsafe_allow_html=True,
+                )
                 st.caption(f"Weather: {weather.get('observed_at', 'latest observation')}")
             except (requests.RequestException, KeyError):
                 st.caption("Weather is currently unavailable.")
@@ -514,7 +587,7 @@ def itinerary_page() -> None:
                     day_frame = pd.DataFrame(day["places"])
                     if not day_frame.empty:
                         st.caption(f"Day {day['day']} route map · zoom or open fullscreen to explore")
-                        st.map(day_frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
+                        render_interactive_map(day_frame)
                     for place in day["places"]:
                         st.markdown(
                             f'<div class="place-panel"><strong>{place["start_time"]}–{place["end_time"]} · {place["name"]}</strong><div class="muted">{", ".join(place["categories"][:3])}</div><div>{place.get("address", "")}</div><div class="muted">Related: {", ".join(place["recommendations"])}</div></div>',
@@ -530,7 +603,7 @@ def itinerary_page() -> None:
             else:
                 st.subheader(f"Explore {city} on the map")
                 st.caption("Zoom, pan, or open fullscreen; the table below provides the corresponding place details.")
-                st.map(frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
+                render_interactive_map(frame, height=440)
                 st.dataframe(frame[["name", "city", "address", "categories", "website"]], width="stretch", hide_index=True)
         else:
             city_frame = pd.DataFrame(cities)
