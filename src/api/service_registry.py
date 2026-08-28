@@ -28,6 +28,28 @@ class ServiceEndpoint:
     url: str | None
 
 
+def backend_status_message(status: BackendStatus) -> tuple[str, str, str]:
+    """Return presentation-neutral copy for the current backend state."""
+    messages = {
+        "recorded": (
+            "notice",
+            "Recorded engineering evidence",
+            "The public portfolio is live; backend panels show evidence from verified local executions.",
+        ),
+        "live": (
+            "live-note",
+            "Live engineering environment",
+            "Configured service buttons open the Proxmox-backed platform.",
+        ),
+        "maintenance": (
+            "notice",
+            "Engineering environment in maintenance",
+            "Recorded evidence remains available while the private lab is offline.",
+        ),
+    }
+    return messages[status]
+
+
 def load_backend_status(environ: Mapping[str, str] | None = None) -> BackendStatus:
     """Return a validated backend state, defaulting to recorded evidence."""
     source = os.environ if environ is None else environ

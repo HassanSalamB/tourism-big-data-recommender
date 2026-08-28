@@ -12,3 +12,5 @@ services:
     envVars:
       - key: PORTFOLIO_DEMO_MODE
         value: "true"
+      - key: BACKEND_ENVIRONMENT_STATUS
+        value: recorded
