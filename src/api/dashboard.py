@@ -201,7 +201,7 @@ def platform_data() -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
 
 
 def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
-    """Render a Leaflet map without relying on Streamlit's WebGL map path."""
+    """Render the original light map style without Streamlit's Chrome WebGL issue."""
     points: list[dict[str, Any]] = []
     for _, row in frame.iterrows():
         lat = row.get("lat", row.get("latitude"))
@@ -230,7 +230,7 @@ def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
           <meta name="viewport" content="width=device-width,initial-scale=1" />
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
           <style>
-            html,body,#map{{height:100%;margin:0;background:#e8efed}}
+            html,body,#map{{height:100%;margin:0;background:#eef1f3}}
             #map{{border:1px solid #d2dfdb;border-radius:12px;overflow:hidden}}
             .leaflet-popup-content{{font:600 13px system-ui;color:#173d39}}
           </style>
@@ -240,14 +240,19 @@ def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
           <script>
             const points = {payload};
             const map = L.map('map', {{scrollWheelZoom: false, zoomControl: true}});
-            L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+            L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
               maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
+              subdomains: 'abcd',
+              attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
             }}).addTo(map);
             const bounds = [];
             points.forEach((point) => {{
               const marker = L.circleMarker([point.lat, point.lon], {{
-                radius: 8, color: '#087f75', weight: 2, fillColor: '#64dfbd', fillOpacity: .92
+                radius: 13,
+                color: '#c94f18',
+                weight: 3,
+                fillColor: '#ff6b35',
+                fillOpacity: .92
               }}).addTo(map);
               const popup = document.createElement('div');
               popup.textContent = `${{point.order.toString().padStart(2,'0')}} · ${{point.name}}`;
@@ -255,7 +260,6 @@ def render_interactive_map(frame: pd.DataFrame, height: int = 360) -> None:
               bounds.push([point.lat, point.lon]);
             }});
             if (points.length > 1) {{
-              L.polyline(bounds, {{color:'#087f75', weight:3, opacity:.7, dashArray:'6 7'}}).addTo(map);
               map.fitBounds(bounds, {{padding:[28,28], maxZoom:14}});
             }} else {{ map.setView(bounds[0], 13); }}
           </script>
