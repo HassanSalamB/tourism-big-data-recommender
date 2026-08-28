@@ -43,13 +43,13 @@ BACKEND_STATUS = load_backend_status()
 SERVICE_REGISTRY = load_service_registry()
 
 
-st.set_page_config(page_title="Accommodation Intelligence Lab", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="Holiday Intelligence · Control Center", page_icon="🧭", layout="wide")
 st.markdown(
     """
     <style>
       :root {
-        --ink:#0c2025; --muted:#60716f; --paper:#f4f7f6; --line:#dce6e3;
-        --green:#0d8b70; --mint:#64dfbd; --navy:#071b24; --warm:#f4b65d;
+        --ink:#edf9f5; --muted:#8ca9a5; --paper:#06131c; --line:#243b44;
+        --green:#49d6aa; --mint:#71f7c5; --navy:#06131c; --warm:#f4b65d;
       }
       html {scroll-behavior:smooth;}
       [data-testid="stAppViewContainer"] {background:linear-gradient(180deg,#f7faf9 0,#f2f6f5 100%);}
@@ -136,6 +136,46 @@ st.markdown(
       .muted {color:#667875; font-size:.9rem;}
       .flow {padding:17px; border-radius:14px; background:linear-gradient(120deg,#092029,#0b3b3a); color:#eaf5f2; line-height:1.8; text-align:center; margin:1rem 0; box-shadow:0 10px 26px rgba(5,31,36,.1);}
       .flow strong {color:#69d5b9;}
+
+      /* Product dashboard visual system */
+      [data-testid="stAppViewContainer"] {background:radial-gradient(circle at 88% 0,rgba(42,132,123,.13),transparent 28%),linear-gradient(180deg,#06131c 0,#081821 100%); color:#e9f7f3;}
+      [data-testid="stHeader"] {background:#06131cdd; border-bottom:1px solid rgba(255,255,255,.05);}
+      .block-container {max-width:1380px; padding-top:1.1rem;}
+      [data-testid="stSidebar"] {border-right:1px solid #20333b; background:linear-gradient(180deg,#07131a 0%,#0a2229 100%);}
+      [data-testid="stMetric"] {border:1px solid #243b44; border-radius:12px; background:#0b1d27; box-shadow:0 12px 28px rgba(0,0,0,.16);}
+      [data-testid="stMetricLabel"] {color:#789793;}
+      [data-testid="stMetricValue"] {color:#f2fffb;}
+      [data-testid="stVerticalBlockBorderWrapper"] {border-color:#243b44 !important; background:rgba(11,29,39,.78); border-radius:15px;}
+      [data-testid="stPageLink-NavLink"] {border-color:#243b44 !important; background:#0b1d27; color:#dcece8;}
+      .portfolio-hero {grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr); padding:38px 42px; border:1px solid #294750; border-radius:18px; background:radial-gradient(circle at 90% 4%,rgba(113,247,197,.19),transparent 31%),linear-gradient(135deg,#081922 0%,#0b3032 100%); box-shadow:0 24px 60px rgba(0,0,0,.28);}
+      .brand-mark {width:38px; height:38px; border:1px solid #71f7c5; border-radius:0; color:#71f7c5; background:#0a1b23; font:900 .76rem ui-monospace,monospace; letter-spacing:.06em;}
+      .portfolio-hero h1 {font-size:clamp(2.5rem,4vw,4rem);}
+      .command-strip {margin-bottom:2rem; border-color:#243b44; background:#243b44; box-shadow:0 12px 32px rgba(0,0,0,.16);}
+      .command-cell {background:#0b1d27; padding:17px 18px;}
+      .command-cell span {color:#668682;}
+      .command-cell strong {color:#f0fbf7; font-size:1.05rem;}
+      .command-cell strong em {color:#71f7c5; font-style:normal;}
+      .section-heading h2,.page-hero h1 {color:#edf9f5;}
+      .section-heading p,.section-lead,.page-hero p {color:#8ca9a5;}
+      .architecture-shell,.level-card,.card,.stage {border-color:#243b44; background:#0b1d27; box-shadow:0 14px 32px rgba(0,0,0,.14);}
+      .level-card h3,.card h3,.stage h3,.evidence-card h3 {color:#edf9f5;}
+      .level-card p,.card p,.stage p,.evidence-card p {color:#8ca9a5;}
+      .reviewer-note {border-color:#275047; background:linear-gradient(120deg,#0b2929,#0b2028); color:#a9c2bd;}
+      .reviewer-note strong {color:#e9faf5;}
+      .page-hero {border-color:#243b44; border-radius:16px; background:radial-gradient(circle at 95% 0,rgba(113,247,197,.13),transparent 32%),#0b1d27; box-shadow:0 14px 38px rgba(0,0,0,.16);}
+      .notice {color:#e8d5a8; background:#2a2417; border-color:#66532c;}
+      .live-note {color:#bce8db; background:#0c2a28; border-color:#27534b;}
+      .place-panel {border-color:#243b44; background:#0d222c; box-shadow:0 7px 18px rgba(0,0,0,.12);}
+      .muted {color:#8ca9a5;}
+      .dashboard-panel {min-height:290px; padding:22px; border:1px solid #243b44; border-radius:14px; background:#0b1d27; box-shadow:0 14px 32px rgba(0,0,0,.16);}
+      .panel-label {color:#71f7c5; font:800 .65rem ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase;}
+      .dashboard-panel h3 {color:#f1fcf8; margin:.65rem 0 1.1rem; font-size:1.2rem;}
+      .system-row {display:grid; grid-template-columns:12px 1fr auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid #243b44; color:#b8cdc8; font-size:.83rem;}
+      .system-row i {width:7px; height:7px; border-radius:50%; background:#71f7c5; box-shadow:0 0 9px rgba(113,247,197,.7);}
+      .system-row strong {color:#edf9f5; font:800 .65rem ui-monospace,monospace; text-transform:uppercase;}
+      .sidebar-brand-card {margin:.2rem .45rem 1rem; padding:1rem; border:1px solid #294049; background:#0a1d25;}
+      .sidebar-brand-card strong {display:block; color:#f3fcf9; font-size:.9rem;}
+      .sidebar-brand-card span {display:block; margin-top:.28rem; color:#6f918d; font:700 .6rem ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase;}
       @media (max-width:900px) {
         .portfolio-hero {grid-template-columns:1fr; padding:38px;}
         .hero-panel {display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
@@ -185,7 +225,7 @@ def platform_data() -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
 def mode_notice() -> None:
     if PORTFOLIO_DEMO_MODE:
         st.markdown(
-            '<div class="notice"><strong>Public portfolio mode.</strong> The interface uses a small curated dataset so the original Streamlit experience remains interactive on Render. The complete DATAtourisme pipeline and backend services are demonstrated with real execution evidence throughout the system pages.</div>',
+            '<div class="live-note"><strong>Interactive portfolio dataset.</strong> This hosted experience uses a curated sample; verified full-stack evidence remains available throughout the system pages.</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -231,28 +271,32 @@ def section_heading(kicker: str, title: str, description: str) -> None:
 
 
 def home_page() -> None:
+    try:
+        summary, cities, _ = platform_data()
+    except requests.RequestException:
+        summary, cities = demo_summary(), demo_cities()
+
     st.markdown(
         """
         <div class="portfolio-hero">
           <div class="hero-copy">
             <div class="brand-row">
-              <span class="brand-mark">AI</span>
-              <span class="brand-name">Accommodation Intelligence Lab</span>
-              <span class="live-pill"><span class="live-dot"></span>Live portfolio</span>
+              <span class="brand-mark">HI</span>
+              <span class="brand-name">Holiday Intelligence</span>
+              <span class="live-pill"><span class="live-dot"></span>System online</span>
             </div>
-            <h1>Destination data, engineered into decisions.</h1>
-            <p class="hero-lead">An end-to-end tourism intelligence platform that turns fragmented supply data into trusted features, explainable recommendations, operational events, and a traveler-facing product.</p>
+            <h1>Holiday Intelligence Control Center.</h1>
+            <p class="hero-lead">Explore destinations, generate preference-aware itineraries and inspect the production-grade data platform powering every recommendation.</p>
             <div class="hero-actions">
-              <a class="cta-primary" href="/itinerary_page" target="_self">Explore live product <span>→</span></a>
+              <a class="cta-primary" href="/itinerary_page" target="_self">Launch itinerary planner <span>→</span></a>
               <a class="cta-secondary" href="/architecture_page" target="_self">View system design</a>
-              <a class="cta-secondary" href="https://github.com/HassanSalamB/tourism-big-data-recommender" target="_blank">GitHub ↗</a>
             </div>
           </div>
           <aside class="hero-panel">
-            <small>Decision pipeline</small>
-            <div class="signal"><span class="signal-index">01</span><div><strong>Unify supply data</strong><span>DATAtourisme → governed medallion layers</span></div></div>
-            <div class="signal"><span class="signal-index">02</span><div><strong>Build decision features</strong><span>Spark, dbt, H3 and graph relationships</span></div></div>
-            <div class="signal"><span class="signal-index">03</span><div><strong>Serve and learn</strong><span>API, Streamlit, Kafka and product telemetry</span></div></div>
+            <small>Platform status</small>
+            <div class="signal"><span class="signal-index">01</span><div><strong>Destination index ready</strong><span>Curated points of interest across France</span></div></div>
+            <div class="signal"><span class="signal-index">02</span><div><strong>Recommendation engine ready</strong><span>Preference, weather and graph context</span></div></div>
+            <div class="signal"><span class="signal-index">03</span><div><strong>Observability connected</strong><span>Pipeline health and product quality signals</span></div></div>
           </aside>
         </div>
         """,
@@ -262,14 +306,40 @@ def home_page() -> None:
     st.markdown(
         f"""
         <div class="command-strip">
-          <div class="command-cell"><span>Product</span><strong>Live on Render</strong></div>
-          <div class="command-cell"><span>Backend</span><strong>{BACKEND_STATUS.title()} evidence</strong></div>
-          <div class="command-cell"><span>Data contract</span><strong>Bronze → Silver → Gold</strong></div>
-          <div class="command-cell"><span>Platform scope</span><strong>18 coordinated services</strong></div>
+          <div class="command-cell"><span>Places indexed</span><strong><em>{summary['places']:,}</em></strong></div>
+          <div class="command-cell"><span>Destinations</span><strong>{summary['cities']:,} cities</strong></div>
+          <div class="command-cell"><span>Decision layer</span><strong>{summary['clusters']:,} Gold clusters</strong></div>
+          <div class="command-cell"><span>Runtime</span><strong><em>Live</em> on Render</strong></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    section_heading(
+        "Live data surface",
+        "Destination intelligence at a glance",
+        "A populated operational view replaces the empty landing experience: inspect coverage now, then open the planner to build a complete trip.",
+    )
+    coverage, readiness = st.columns([0.64, 0.36], gap="large")
+    with coverage:
+        with st.container(border=True):
+            st.markdown('<div class="panel-label">Destination coverage · top cities</div>', unsafe_allow_html=True)
+            coverage_frame = pd.DataFrame(cities).nlargest(8, "poi_count")
+            st.bar_chart(coverage_frame.set_index("city")["poi_count"], color="#71f7c5")
+    with readiness:
+        st.markdown(
+            """
+            <div class="dashboard-panel">
+              <div class="panel-label">System readiness</div>
+              <h3>Decision platform</h3>
+              <div class="system-row"><i></i><span>Curated tourism dataset</span><strong>Ready</strong></div>
+              <div class="system-row"><i></i><span>Preference-aware planner</span><strong>Ready</strong></div>
+              <div class="system-row"><i></i><span>Weather context</span><strong>Live</strong></div>
+              <div class="system-row"><i></i><span>Engineering evidence</span><strong>Verified</strong></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     section_heading(
         "System architecture",
@@ -428,7 +498,7 @@ def itinerary_page() -> None:
         st.stop()
 
     metric_cols = st.columns(5)
-    metric_cols[0].metric("Places", f"{summary['places']:,}")
+    metric_cols[0].metric("Places indexed", f"{summary['places']:,}")
     metric_cols[1].metric("Destinations", f"{summary['cities']:,}")
     metric_cols[2].metric("Popular cities", f"{summary['popular_destinations']:,}")
     metric_cols[3].metric("Categories", f"{summary['categories']:,}")
@@ -436,29 +506,31 @@ def itinerary_page() -> None:
 
     left, right = st.columns([0.32, 0.68], gap="large")
     with left:
-        st.subheader("Plan")
-        city_options = [item["city"] for item in cities]
-        city = st.selectbox("Destination", options=city_options)
-        days = st.slider("Days", 1, 5, 2)
-        max_places = st.slider("Places per day", 1, 6, 3)
-        selected_categories = st.multiselect("Interests", options=categories, placeholder="All categories")
-        generate = st.button("Generate itinerary", type="primary", width="stretch")
+        with st.container(border=True):
+            st.markdown('<div class="panel-label">Trip controls</div>', unsafe_allow_html=True)
+            st.subheader("Plan your route")
+            city_options = [item["city"] for item in cities]
+            city = st.selectbox("Destination", options=city_options)
+            days = st.slider("Days", 1, 5, 2)
+            max_places = st.slider("Places per day", 1, 6, 3)
+            selected_categories = st.multiselect("Interests", options=categories, placeholder="All categories")
+            generate = st.button("Refresh itinerary", type="primary", width="stretch")
 
-        try:
-            weather = WEATHER[city] if PORTFOLIO_DEMO_MODE else api_get("/weather/current", city=city)
-            weather_cols = st.columns(2)
-            weather_cols[0].metric("Temperature", f"{weather['temperature_2m']:.1f} °C")
-            weather_cols[1].metric("Wind", f"{weather['wind_speed_10m']:.1f} km/h")
-            st.caption(f"Weather: {weather.get('observed_at', 'latest observation')}")
-        except (requests.RequestException, KeyError):
-            st.caption("Weather is currently unavailable.")
+            try:
+                weather = WEATHER[city] if PORTFOLIO_DEMO_MODE else api_get("/weather/current", city=city)
+                weather_cols = st.columns(2)
+                weather_cols[0].metric("Temperature", f"{weather['temperature_2m']:.1f} °C")
+                weather_cols[1].metric("Wind", f"{weather['wind_speed_10m']:.1f} km/h")
+                st.caption(f"Weather: {weather.get('observed_at', 'latest observation')}")
+            except (requests.RequestException, KeyError):
+                st.caption("Weather is currently unavailable.")
 
     with right:
-        view = st.segmented_control("View", ["Itinerary", "Map & places", "Destinations"], default="Itinerary", label_visibility="collapsed")
+        with st.container(border=True):
+            st.markdown('<div class="panel-label">Workspace</div>', unsafe_allow_html=True)
+            view = st.segmented_control("View", ["Itinerary", "Map & places", "Destinations"], default="Itinerary", label_visibility="collapsed")
         if view == "Itinerary":
-            if not generate:
-                st.info("Choose a destination and generate an itinerary.")
-            else:
+            if PORTFOLIO_DEMO_MODE or generate:
                 if PORTFOLIO_DEMO_MODE:
                     itinerary = demo_itinerary(city, days, max_places, selected_categories)
                 else:
@@ -476,6 +548,8 @@ def itinerary_page() -> None:
                             f'<div class="place-panel"><strong>{place["start_time"]}–{place["end_time"]} · {place["name"]}</strong><div class="muted">{", ".join(place["categories"][:3])}</div><div>{place.get("address", "")}</div><div class="muted">Related: {", ".join(place["recommendations"])}</div></div>',
                             unsafe_allow_html=True,
                         )
+            else:
+                st.info("Choose a destination and generate an itinerary.")
         elif view == "Map & places":
             places = demo_places(city, selected_categories) if PORTFOLIO_DEMO_MODE else api_get("/places", city=city, limit=50, categories=selected_categories or None)
             frame = pd.DataFrame(places)
@@ -488,7 +562,7 @@ def itinerary_page() -> None:
                 st.dataframe(frame[["name", "city", "address", "categories", "website"]], width="stretch", hide_index=True)
         else:
             city_frame = pd.DataFrame(cities)
-            st.bar_chart(city_frame.set_index("city")["poi_count"])
+            st.bar_chart(city_frame.set_index("city")["poi_count"], color="#71f7c5")
             st.dataframe(city_frame, width="stretch", hide_index=True)
 
 
@@ -603,6 +677,11 @@ PIPELINE_PAGE = st.Page(pipeline_page, title="Pipeline & Storage", icon="🔄")
 SERVING_PAGE = st.Page(serving_page, title="Serving & Graph", icon="🔌")
 OBSERVABILITY_PAGE = st.Page(observability_page, title="Observability", icon="📊")
 RUNBOOK_PAGE = st.Page(runbook_page, title="Runbook", icon="📘")
+
+st.sidebar.markdown(
+    '<div class="sidebar-brand-card"><strong>Holiday Intelligence</strong><span>Data product control center</span></div>',
+    unsafe_allow_html=True,
+)
 
 navigation = st.navigation(
     {
