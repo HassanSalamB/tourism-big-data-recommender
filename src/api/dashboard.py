@@ -42,26 +42,39 @@ BACKEND_STATUS = load_backend_status()
 SERVICE_REGISTRY = load_service_registry()
 
 
-st.set_page_config(page_title="Holiday Itinerary Data Platform", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="Accommodation Intelligence Lab", page_icon="🧭", layout="wide")
 st.markdown(
     """
     <style>
-      .block-container {max-width: 1240px; padding-top: 1.4rem; padding-bottom: 3rem;}
-      [data-testid="stSidebar"] {border-right: 1px solid #e1e8e6;}
+      .block-container {max-width: 1280px; padding-top: 1.25rem; padding-bottom: 3rem;}
+      [data-testid="stSidebar"] {border-right: 1px solid #dce7e4; background:#f7faf9;}
       [data-testid="stMetric"] {border: 1px solid #dce5e3; border-radius: 12px; padding: 12px 16px; background: #fff;}
-      .hero {padding: 34px 38px; border-radius: 22px; color: #effaf7; background: linear-gradient(135deg,#071923,#0b3b3a); margin:.4rem 0 1.25rem;}
+      .hero {padding: 42px 44px; border-radius: 24px; color: #effaf7; background: radial-gradient(circle at 92% 8%,rgba(54,211,172,.18),transparent 32%),linear-gradient(135deg,#061721,#0a3c3a); margin:.4rem 0 1.1rem; box-shadow:0 18px 45px rgba(5,28,35,.14);}
       .hero small {color:#67d4b8; font-weight:700; letter-spacing:.16em;}
-      .hero h2 {color:#fff; font-size:2.25rem; margin:.5rem 0 .7rem; max-width:850px;}
-      .hero p {color:#c5d8d5; font-size:1.04rem; max-width:850px; margin:0;}
+      .hero h2 {color:#fff; font-size:2.55rem; line-height:1.13; margin:.65rem 0 .85rem; max-width:900px;}
+      .hero p {color:#c9ddda; font-size:1.08rem; line-height:1.7; max-width:900px; margin:0;}
       .card {min-height:145px; padding:20px; border:1px solid #dce6e3; border-radius:16px; background:#f8fbfa;}
       .card h3 {font-size:1.08rem; color:#123d3a; margin:0 0 .5rem;}
       .card p {font-size:.92rem; color:#536765; margin:0;}
+      .stage {min-height:168px; padding:22px; border:1px solid #d9e7e3; border-radius:18px; background:linear-gradient(180deg,#ffffff,#f5faf8);}
+      .stage-number {display:inline-block; color:#087862; background:#dff5ee; border-radius:999px; padding:4px 10px; font-size:.76rem; font-weight:800; letter-spacing:.08em;}
+      .stage h3 {font-size:1.05rem; color:#103b38; margin:.75rem 0 .45rem;}
+      .stage p {font-size:.9rem; line-height:1.55; color:#5c706c; margin:0;}
+      .reviewer-note {padding:20px 22px; border-left:5px solid #19a984; border-radius:12px; background:#edf9f5; margin:.7rem 0 1.2rem; color:#244d47;}
+      .eyebrow {font-size:.78rem; color:#087862; font-weight:800; letter-spacing:.13em; text-transform:uppercase; margin-bottom:.3rem;}
       .notice {padding:13px 17px; border-radius:12px; background:#fff7e5; border:1px solid #ead49c; margin:.5rem 0 1rem;}
       .live-note {padding:13px 17px; border-radius:12px; background:#eaf7f3; border:1px solid #aed9cd; margin:.5rem 0 1rem;}
       .place-panel {border:1px solid #d8e1df; border-radius:10px; padding:.8rem 1rem; margin-bottom:.75rem; background:#fff;}
       .muted {color:#667875; font-size:.9rem;}
       .flow {padding:18px; border-radius:15px; background:#0b222b; color:#eaf5f2; line-height:2; text-align:center; margin:1rem 0;}
       .flow strong {color:#69d5b9;}
+      @media (max-width: 640px) {
+        .block-container {padding-top:1rem;}
+        .hero {padding:28px 25px; border-radius:19px;}
+        .hero h2 {font-size:1.9rem; line-height:1.16;}
+        .hero p {font-size:.98rem; line-height:1.55;}
+        .stage {min-height:auto; margin-bottom:.6rem;}
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -108,49 +121,87 @@ def backend_status_notice() -> None:
 
 
 def home_page() -> None:
-    st.title("Holiday Itinerary Data Platform")
-    st.caption("An end-to-end data engineering portfolio project built around French tourism data")
+    st.title("Accommodation Intelligence Lab")
+    st.caption("A decision-ready tourism data product and end-to-end data engineering portfolio")
     st.markdown(
         """
         <div class="hero">
-          <small>DATA ENGINEERING · ANALYTICS · PLATFORM OPERATIONS</small>
-          <h2>From raw tourism feeds to explainable, observable itinerary products</h2>
-          <p>The platform ingests DATAtourisme data, preserves change history, builds trusted relational and graph models,
-          serves itinerary APIs, emits operational events, and exposes the system through monitoring dashboards.</p>
+          <small>TOURISM INTELLIGENCE · DATA PRODUCTS · PLATFORM OPERATIONS</small>
+          <h2>Turning fragmented destination data into decisions travelers and accommodation teams can use</h2>
+          <p>This lab converts French tourism supply data into trusted geographic features, explainable recommendations,
+          itinerary APIs, operational events, and monitored decision signals—showing the full path from raw data to a usable product.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.image(str(ARCHITECTURE_HERO), width="stretch")
-    st.caption("The complete platform at a glance—from DATAtourisme ingestion to the itinerary UI and operational telemetry.")
+    primary_actions = st.columns([1, 1, 1.15])
+    with primary_actions[0]:
+        st.page_link(APP_PAGE, label="Launch interactive demo", icon="🧭", width="stretch")
+    with primary_actions[1]:
+        st.page_link(PIPELINE_PAGE, label="Inspect the data platform", icon="🔄", width="stretch")
+    with primary_actions[2]:
+        st.link_button("Review source on GitHub", REPOSITORY_URL, icon="↗", width="stretch")
 
-    st.subheader("Explore the live product and recorded engineering evidence")
-    st.metric("Backend environment", BACKEND_STATUS.title())
+    st.markdown("### The platform in one view")
+    with st.container(border=True):
+        st.image(str(ARCHITECTURE_HERO), width="stretch")
+    st.caption("Airflow coordinates medallion processing, Spark and dbt create decision features, FastAPI serves the product, and Grafana closes the operational feedback loop.")
+
+    st.markdown("### From source data to a decision")
+    stages = st.columns(4)
+    stage_content = [
+        ("01 · INGEST", "Capture change", "Airflow ingests DATAtourisme archives and SHA-256 change detection prevents unnecessary reprocessing."),
+        ("02 · TRUST", "Build governed layers", "Bronze preserves raw JSONB; Silver normalizes entities; Gold creates H3 and city-level analytical features."),
+        ("03 · DECIDE", "Generate intelligence", "PostgreSQL, KMeans, weather and Neo4j relationships produce explainable destination recommendations."),
+        ("04 · LEARN", "Observe outcomes", "Kafka events and Prometheus metrics expose usage, latency, category match, route distance and weather suitability."),
+    ]
+    for column, (number, heading, description) in zip(stages, stage_content):
+        with column:
+            st.markdown(
+                f'<div class="stage"><span class="stage-number">{number}</span><h3>{heading}</h3><p>{description}</p></div>',
+                unsafe_allow_html=True,
+            )
+
+    st.markdown(
+        """
+        <div class="reviewer-note">
+          <div class="eyebrow">Reviewer context</div>
+          <strong>Why this is relevant to accommodation intelligence:</strong> the project demonstrates the same engineering pattern—combine fragmented market signals, create governed features, serve explainable recommendations, and monitor whether the product is useful. It uses public tourism-supply data rather than proprietary hotel pricing or demand data.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("Open the product or inspect the engineering evidence")
+    status_columns = st.columns([0.22, 0.78])
+    status_columns[0].metric("Backend evidence", BACKEND_STATUS.title())
+    status_columns[1].info("The interactive product runs live on Render. Backend panels use screenshots captured from verified full-stack executions until the dedicated engineering environment is online.")
     cols = st.columns(4)
     with cols[0]:
         st.image(str(SCREENSHOTS / "01-streamlit-dashboard.png"), width="stretch")
-        st.page_link(APP_PAGE, label="Itinerary App", icon="🧭")
+        st.page_link(APP_PAGE, label="Use the itinerary product", icon="🧭", width="stretch")
     with cols[1]:
         st.image(str(SCREENSHOTS / "03-airflow-dag-grid.png"), width="stretch")
-        st.page_link(PIPELINE_PAGE, label="Pipeline & Storage", icon="🔄")
+        st.page_link(PIPELINE_PAGE, label="Inspect Airflow & storage", icon="🔄", width="stretch")
     with cols[2]:
         st.image(str(SCREENSHOTS / "02-fastapi-docs.png"), width="stretch")
-        st.page_link(SERVING_PAGE, label="Serving & Graph", icon="🔌")
+        st.page_link(SERVING_PAGE, label="Inspect API, graph & Kafka", icon="🔌", width="stretch")
     with cols[3]:
         st.image(str(SCREENSHOTS / "11-grafana-kpis.png"), width="stretch")
-        st.page_link(OBSERVABILITY_PAGE, label="Observability", icon="📊")
+        st.page_link(OBSERVABILITY_PAGE, label="Inspect Grafana & metrics", icon="📊", width="stretch")
 
-    st.subheader("Three levels of the system")
-    st.image(str(LEVELS_OVERVIEW), width="stretch")
+    st.subheader("Three engineering levels")
+    with st.container(border=True):
+        st.image(str(LEVELS_OVERVIEW), width="stretch")
     st.caption("Serving, incremental ETL, and observability are separated so each layer can evolve and fail independently.")
 
-    st.subheader("What this repository demonstrates")
+    st.subheader("What a reviewer can validate")
     capabilities = st.columns(4)
-    capabilities[0].metric("Data layers", "Bronze → Gold")
-    capabilities[1].metric("Storage models", "SQL + Graph")
-    capabilities[2].metric("Delivery", "API + Streamlit")
-    capabilities[3].metric("Operations", "Metrics + Alerts")
+    capabilities[0].metric("Architecture", "18 services")
+    capabilities[1].metric("Data quality", "Bronze → Gold")
+    capabilities[2].metric("Data product", "API + UI")
+    capabilities[3].metric("Operations", "Events + SLOs")
 
 
 def itinerary_page() -> None:
