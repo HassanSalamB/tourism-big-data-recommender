@@ -110,3 +110,4 @@ raw
 .venv
 uv.lock
 pyproject.toml
+.worktrees/
