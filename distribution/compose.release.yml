@@ -125,7 +125,7 @@ services:
     mem_limit: 512m
     environment:
       - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_PASSWORD=${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD is required}
       - POSTGRES_DB=airflow
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
@@ -143,7 +143,7 @@ services:
     entrypoint: /bin/bash
     command:
       - -c
-      - airflow db migrate && airflow users create --username admin --password admin --firstname Local --lastname Admin --role Admin --email admin@example.com || true
+      - airflow db migrate && airflow users create --username ${AIRFLOW_ADMIN_USERNAME:?AIRFLOW_ADMIN_USERNAME is required} --password ${AIRFLOW_ADMIN_PASSWORD:?AIRFLOW_ADMIN_PASSWORD is required} --firstname Platform --lastname Admin --role Admin --email ${AIRFLOW_ADMIN_EMAIL:?AIRFLOW_ADMIN_EMAIL is required} || true
     depends_on:
       airflow-postgres:
         condition: service_healthy
@@ -161,8 +161,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD is required}@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_WEBSERVER_SECRET_KEY:?AIRFLOW_WEBSERVER_SECRET_KEY is required}
       - PYTHONPATH=/opt/holiday:/opt/holiday/src
       - NEO4J_URI=bolt://neo4j:7687
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -191,8 +191,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD is required}@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_WEBSERVER_SECRET_KEY:?AIRFLOW_WEBSERVER_SECRET_KEY is required}
       - PYTHONPATH=/opt/holiday:/opt/holiday/src
       - NEO4J_URI=bolt://neo4j:7687
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -227,8 +227,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD is required}@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_WEBSERVER_SECRET_KEY:?AIRFLOW_WEBSERVER_SECRET_KEY is required}
       - PYTHONPATH=/opt/holiday:/opt/holiday/src
       - NEO4J_URI=bolt://neo4j:7687
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -328,8 +328,8 @@ services:
     container_name: holiday_grafana
     mem_limit: 512m
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

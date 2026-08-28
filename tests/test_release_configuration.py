@@ -87,6 +87,21 @@ class ReleaseConfigurationTest(unittest.TestCase):
             with self.subTest(service=name, image=image):
                 self.assertNotEqual(image.rsplit(":", 1)[-1], "latest")
 
+    def test_administrative_credentials_are_environment_driven(self):
+        airflow_init = self.config["services"]["airflow-init"]
+        airflow_command = " ".join(airflow_init["command"])
+        self.assertNotIn("--password admin", airflow_command)
+        self.assertNotIn("local-dev-secret", airflow_command)
+
+        grafana_environment = self.config["services"]["grafana"]["environment"]
+        self.assertNotEqual(grafana_environment["GF_SECURITY_ADMIN_PASSWORD"], "admin")
+
+        airflow_environment = self.config["services"]["airflow-webserver"]["environment"]
+        self.assertNotEqual(
+            airflow_environment["AIRFLOW__WEBSERVER__SECRET_KEY"],
+            "local-dev-secret",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
