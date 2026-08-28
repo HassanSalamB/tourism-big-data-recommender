@@ -1,0 +1,21 @@
+# Example local ingress map. Replace example.com only in the private VM copy.
+ingress:
+  - hostname: app.example.com
+    service: http://dashboard:8501
+  - hostname: api.example.com
+    service: http://api:8000
+  - hostname: grafana.example.com
+    service: http://grafana:3000
+  - hostname: airflow.example.com
+    service: http://airflow-webserver:8080
+  - hostname: kafka.example.com
+    service: http://kafka-ui:8080
+  - hostname: spark.example.com
+    service: http://spark-master:8080
+  - hostname: prometheus.example.com
+    service: http://prometheus:9090
+  - hostname: neo4j.example.com
+    service: http://neo4j:7474
+  - hostname: db.example.com
+    service: http://adminer:8080
+  - service: http_status:404

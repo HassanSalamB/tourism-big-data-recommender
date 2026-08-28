@@ -15,6 +15,21 @@ try:
 except ImportError:
     from dashboard_demo import WEATHER, demo_categories, demo_cities, demo_itinerary, demo_places, demo_summary
 
+try:
+    from src.api.service_registry import (
+        backend_status_message,
+        load_backend_status,
+        load_service_registry,
+        service_call_to_action,
+    )
+except ImportError:
+    from service_registry import (
+        backend_status_message,
+        load_backend_status,
+        load_service_registry,
+        service_call_to_action,
+    )
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = PROJECT_ROOT / "artifacts" / "screenshots"
@@ -23,6 +38,8 @@ LEVELS_OVERVIEW = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-three-lev
 REPOSITORY_URL = "https://github.com/HassanSalamB/tourism-big-data-recommender"
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PORTFOLIO_DEMO_MODE = os.getenv("PORTFOLIO_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
+BACKEND_STATUS = load_backend_status()
+SERVICE_REGISTRY = load_service_registry()
 
 
 st.set_page_config(page_title="Holiday Itinerary Data Platform", page_icon="🧭", layout="wide")
@@ -82,6 +99,14 @@ def mode_notice() -> None:
         )
 
 
+def backend_status_notice() -> None:
+    css_class, heading, message = backend_status_message(BACKEND_STATUS)
+    st.markdown(
+        f'<div class="{css_class}"><strong>{heading}.</strong> {message}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def home_page() -> None:
     st.title("Holiday Itinerary Data Platform")
     st.caption("An end-to-end data engineering portfolio project built around French tourism data")
@@ -101,6 +126,7 @@ def home_page() -> None:
     st.caption("The complete platform at a glance—from DATAtourisme ingestion to the itinerary UI and operational telemetry.")
 
     st.subheader("Explore the live product and recorded engineering evidence")
+    st.metric("Backend environment", BACKEND_STATUS.title())
     cols = st.columns(4)
     with cols[0]:
         st.image(str(SCREENSHOTS / "01-streamlit-dashboard.png"), width="stretch")
@@ -200,9 +226,12 @@ def itinerary_page() -> None:
             st.dataframe(city_frame, width="stretch", hide_index=True)
 
 
-def evidence_panel(name: str, role: str, screenshot: str, source: str) -> None:
+def evidence_panel(name: str, role: str, screenshot: str, source: str, service_key: str) -> None:
     st.subheader(name)
     st.write(role)
+    action = service_call_to_action(BACKEND_STATUS, SERVICE_REGISTRY[service_key])
+    if action is not None:
+        st.link_button(action[0], action[1], type="primary", width="stretch")
     st.image(str(SCREENSHOTS / screenshot), width="stretch")
     st.link_button(f"View {name} implementation", f"{REPOSITORY_URL}/blob/dev/{source}", width="stretch")
 
@@ -210,14 +239,14 @@ def evidence_panel(name: str, role: str, screenshot: str, source: str) -> None:
 def pipeline_page() -> None:
     st.title("Pipeline & Storage")
     st.caption("Level 2 · Incremental ETL, medallion layers, analytical processing, and synchronization")
-    st.markdown('<div class="notice"><strong>Recorded execution evidence.</strong> These services run through the repository’s Docker Compose environment. Every panel below comes from a real local run and links to its implementation.</div>', unsafe_allow_html=True)
+    backend_status_notice()
     st.markdown('<div class="flow"><strong>DATATOURISME</strong> → SHA-256 CDC → <strong>BRONZE</strong> → <strong>SILVER</strong> → SPARK / dbt / H3 / NEO4J</div>', unsafe_allow_html=True)
     left, right = st.columns(2)
     with left:
-        evidence_panel("Airflow", "Runs the ordered Bronze → Silver → Spark → Gold → graph → dbt workflow with retries and task visibility.", "03-airflow-dag-grid.png", "airflow/dags/holiday_pipeline_dag.py")
-        evidence_panel("Spark", "Builds city-level analytical features from trusted Silver data and writes Parquet outputs.", "08-spark-master.png", "src/spark/city_feature_job.py")
+        evidence_panel("Airflow", "Runs the ordered Bronze → Silver → Spark → Gold → graph → dbt workflow with retries and task visibility.", "03-airflow-dag-grid.png", "airflow/dags/holiday_pipeline_dag.py", "airflow")
+        evidence_panel("Spark", "Builds city-level analytical features from trusted Silver data and writes Parquet outputs.", "08-spark-master.png", "src/spark/city_feature_job.py", "spark")
     with right:
-        evidence_panel("Postgres", "Stores raw JSONB, normalized relational tables, H3 clusters, and dbt marts.", "16-adminer-postgres-tables.png", "src/gold/postgres_warehouse.py")
+        evidence_panel("Postgres", "Stores raw JSONB, normalized relational tables, H3 clusters, and dbt marts.", "16-adminer-postgres-tables.png", "src/gold/postgres_warehouse.py", "adminer")
         st.subheader("dbt analytics layer")
         st.write("Defines staging models, city marts, category marts, schema tests, and source contracts.")
         st.code("dbt run --profiles-dir .\ndbt test --profiles-dir .", language="bash")
@@ -227,25 +256,27 @@ def pipeline_page() -> None:
 def serving_page() -> None:
     st.title("Serving, Graph & Events")
     st.caption("Level 1 · Request lifecycle from user intent to a multi-model itinerary response")
+    backend_status_notice()
     st.markdown('<div class="flow"><strong>STREAMLIT</strong> → FastAPI → POSTGRES + KMEANS + NEO4J → RESPONSE + KAFKA EVENTS</div>', unsafe_allow_html=True)
     left, right = st.columns(2)
     with left:
-        evidence_panel("FastAPI", "Validates contracts, retrieves Silver POIs, runs preference-aware KMeans grouping, and returns itinerary responses.", "02-fastapi-docs.png", "src/api/app.py")
-        evidence_panel("Neo4j", "Traverses POI → City and POI → Category relationships to enrich stops with related-place recommendations.", "14-neo4j-browser.png", "src/gold/neo4j_graph_loader.py")
+        evidence_panel("FastAPI", "Validates contracts, retrieves Silver POIs, runs preference-aware KMeans grouping, and returns itinerary responses.", "02-fastapi-docs.png", "src/api/app.py", "fastapi")
+        evidence_panel("Neo4j", "Traverses POI → City and POI → Category relationships to enrich stops with related-place recommendations.", "14-neo4j-browser.png", "src/gold/neo4j_graph_loader.py", "neo4j")
     with right:
-        evidence_panel("Streamlit", "Collects preferences and presents itineraries, maps, weather, destinations, and place details.", "01-streamlit-dashboard.png", "src/api/dashboard.py")
-        evidence_panel("Kafka", "Publishes weather snapshots and itinerary-generated events without blocking the user request.", "07-kafka-weather-messages.png", "src/streaming/kafka_events.py")
+        evidence_panel("Streamlit", "Collects preferences and presents itineraries, maps, weather, destinations, and place details.", "01-streamlit-dashboard.png", "src/api/dashboard.py", "streamlit")
+        evidence_panel("Kafka", "Publishes weather snapshots and itinerary-generated events without blocking the user request.", "07-kafka-weather-messages.png", "src/streaming/kafka_events.py", "kafka")
 
 
 def observability_page() -> None:
     st.title("Observability & Product Quality")
     st.caption("Level 3 · Operational telemetry, product-quality metrics, dashboards, and alerts")
+    backend_status_notice()
     st.markdown('<div class="flow"><strong>FASTAPI + PIPELINE METRICS</strong> → PROMETHEUS → GRAFANA → ALERTMANAGER</div>', unsafe_allow_html=True)
     left, right = st.columns(2)
     with left:
-        evidence_panel("Prometheus", "Scrapes request volume, latency, itinerary quality, weather suitability, route distance, and service health.", "12-prometheus-targets.png", "monitoring/prometheus/prometheus.yml")
+        evidence_panel("Prometheus", "Scrapes request volume, latency, itinerary quality, weather suitability, route distance, and service health.", "12-prometheus-targets.png", "monitoring/prometheus/prometheus.yml", "prometheus")
     with right:
-        evidence_panel("Grafana", "Combines operational and product KPIs into an engineer-facing platform dashboard.", "11-grafana-kpis.png", "monitoring/grafana/dashboards/holiday-platform.json")
+        evidence_panel("Grafana", "Combines operational and product KPIs into an engineer-facing platform dashboard.", "11-grafana-kpis.png", "monitoring/grafana/dashboards/holiday-platform.json", "grafana")
     st.subheader("Metrics that answer both ‘is it healthy?’ and ‘is it useful?’")
     metric_table = pd.DataFrame(
         [
@@ -263,6 +294,7 @@ def observability_page() -> None:
 def runbook_page() -> None:
     st.title("Run the Complete Platform")
     st.caption("Local engineering runbook for reviewers who want to reproduce the backend")
+    backend_status_notice()
     st.code("docker compose up --build airflow-init\ndocker compose up --build -d", language="bash")
     st.subheader("Local service map")
     ports = pd.DataFrame(

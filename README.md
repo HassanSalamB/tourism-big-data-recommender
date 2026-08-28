@@ -1,54 +1,43 @@
 # Holiday Itinerary Data Platform
 
-An end-to-end tourism data platform that ingests DATAtourisme records, builds trusted relational and graph models, generates multi-day itineraries, and exposes operational and product-quality metrics.
+A tourism intelligence project that turns DATAtourisme records into trusted location data, recommendation APIs, multi-day itineraries, and operational insights.
 
-**[Open the live portfolio](https://holiday-itinerary-platform.onrender.com/)** · **[Read the project guide](docs/PROJECT_GUIDE.md)**
+**[Open the portfolio](https://holiday-itinerary-platform.onrender.com/)** · **[Project guide](docs/PROJECT_GUIDE.md)** · **[Deployment runbook](docs/PROXMOX_DEPLOYMENT.md)**
 
 ![Holiday Itinerary Data Platform](docs/assets/holiday-platform-architecture.png)
 
-## Platform
+## How it works
 
 ```text
-DATAtourisme → Airflow → Bronze JSONB → Silver tables + Parquet
-              → Spark + dbt + H3 Gold + Neo4j
-              → FastAPI + Streamlit + Kafka
-              → Prometheus + Grafana + Alertmanager
+DATAtourisme → Airflow → Bronze / Silver / Gold → Spark + dbt + Neo4j
+              → FastAPI + Streamlit → Kafka → Prometheus + Grafana
 ```
 
-| Area | Technology |
-|---|---|
-| Orchestration | Airflow |
-| Storage and modeling | Postgres, Parquet, H3, Neo4j, Snowflake |
-| Processing | Pandas, Spark, dbt |
-| Product delivery | FastAPI, Streamlit |
-| Events and operations | Kafka, Prometheus, Grafana, Alertmanager |
-| Infrastructure | Docker Compose, Terraform, Kubernetes |
+- Airflow orchestrates ingestion, quality checks, transformations, and publishing.
+- PostgreSQL, Parquet, H3, and Neo4j support analytical and geographic use cases.
+- FastAPI and Streamlit turn the data into an itinerary product.
+- Kafka, Prometheus, Grafana, and Alertmanager expose runtime behavior.
 
-## Quick start
+## Current availability
+
+The Render portfolio is live and uses a curated sample. Backend panels show recorded evidence until a private Proxmox environment is provisioned; they automatically expose live links when service URLs are configured.
+
+## Run locally
 
 ```bash
+cp .env.example .env
 docker compose up --build airflow-init
 docker compose up --build -d
 ```
 
-Open:
+Start with Streamlit at `http://localhost:8501` and FastAPI at `http://localhost:8000/docs`.
 
-- Streamlit: `http://localhost:8501`
-- FastAPI: `http://localhost:8000/docs`
-- Airflow: `http://localhost:8088`
-- Kafka UI: `http://localhost:8090`
-- Spark: `http://localhost:8080`
-- Grafana: `http://localhost:3000`
-- Prometheus: `http://localhost:9090`
-- Adminer: `http://localhost:5050`
+## Explore the implementation
 
-## Key implementation
-
-- Pipeline entry point: [`src/pipeline.py`](src/pipeline.py)
-- Airflow DAG: [`airflow/dags/holiday_pipeline_dag.py`](airflow/dags/holiday_pipeline_dag.py)
-- API: [`src/api/app.py`](src/api/app.py)
-- Streamlit: [`src/api/dashboard.py`](src/api/dashboard.py)
-- dbt models: [`dbt/models`](dbt/models)
-- Monitoring: [`monitoring`](monitoring)
-
-The public Render deployment runs the interactive Streamlit portfolio with a clearly labelled curated sample. The complete backend stack is reproducible through Docker Compose, with recorded dashboard evidence available inside the public portfolio and under [`artifacts/screenshots`](artifacts/screenshots).
+- [Pipeline](src/pipeline.py)
+- [Airflow DAG](airflow/dags/holiday_pipeline_dag.py)
+- [FastAPI](src/api/app.py)
+- [Streamlit portfolio](src/api/dashboard.py)
+- [dbt models](dbt/models)
+- [Recorded dashboard evidence](artifacts/screenshots)
+- [Future Proxmox deployment](docs/PROXMOX_DEPLOYMENT.md)
