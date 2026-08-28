@@ -1,15 +1,23 @@
+x-runtime: &runtime
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   postgres:
-    image: postgres:15
+    <<: *runtime
+    image: postgres:15.14-bookworm
     container_name: postgres_db
+    mem_limit: 1g
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
       - pg_data:/var/lib/postgresql/data
-    ports:
-      - "${DB_PORT}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -18,22 +26,22 @@ services:
       start_period: 30s
 
   neo4j:
-    image: neo4j:5
+    <<: *runtime
+    image: neo4j:5.26.12-community
     container_name: neo4j_db
+    mem_limit: 2g
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${NEO4J_BROWSER_PORT:-7474}:7474"
     environment:
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
     volumes:
       - neo4j_data:/data
 
   kafka:
+    <<: *runtime
     image: bitnamilegacy/kafka:4.0.0-debian-12-r10
     container_name: holiday_kafka
-    ports:
-      - "9092:9092"
-      - "9094:9094"
+    mem_limit: 1g
     environment:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
@@ -48,10 +56,12 @@ services:
       - kafka_data:/bitnami/kafka
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    <<: *runtime
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: holiday_kafka_ui
+    mem_limit: 512m
     ports:
-      - "8090:8080"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${KAFKA_UI_PORT:-8090}:8080"
     depends_on:
       - kafka
     environment:
@@ -59,12 +69,12 @@ services:
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
 
   kafka-analytics-consumer:
+    <<: *runtime
     image: ${APP_IMAGE}
     container_name: holiday_kafka_analytics_consumer
+    mem_limit: 512m
     command: python -m src.streaming.analytics_consumer
-    env_file: .env
-    ports:
-      - "9108:9108"
+    env_file: ${SERVICE_ENV_FILE:-.env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,20 +90,23 @@ services:
       - KAFKA_ANALYTICS_METRICS_PORT=9108
 
   spark-master:
+    <<: *runtime
     image: bitnamilegacy/spark:4.0.0-debian-12-r20
     container_name: holiday_spark_master
+    mem_limit: 1g
     environment:
       - SPARK_MODE=master
     ports:
-      - "7077:7077"
-      - "8080:8080"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${SPARK_UI_PORT:-8080}:8080"
     volumes:
       - holiday_data:/opt/holiday/data
       - holiday_data:/app/data
 
   spark-worker:
+    <<: *runtime
     image: bitnamilegacy/spark:4.0.0-debian-12-r20
     container_name: holiday_spark_worker
+    mem_limit: 3g
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
@@ -106,8 +119,10 @@ services:
       - holiday_data:/app/data
 
   airflow-postgres:
-    image: postgres:15
+    <<: *runtime
+    image: postgres:15.14-bookworm
     container_name: holiday_airflow_postgres
+    mem_limit: 512m
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
@@ -123,7 +138,7 @@ services:
   airflow-init:
     image: ${AIRFLOW_IMAGE}
     container_name: holiday_airflow_init
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     user: "${AIRFLOW_UID:-50000}:0"
     entrypoint: /bin/bash
     command:
@@ -158,13 +173,15 @@ services:
       - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
 
   airflow-webserver:
+    <<: *runtime
     image: ${AIRFLOW_IMAGE}
     container_name: holiday_airflow_webserver
+    mem_limit: 2g
     command: webserver
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     user: "${AIRFLOW_UID:-50000}:0"
     ports:
-      - "8088:8080"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${AIRFLOW_PORT:-8088}:8080"
     depends_on:
       airflow-postgres:
         condition: service_healthy
@@ -186,10 +203,12 @@ services:
       - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
 
   airflow-scheduler:
+    <<: *runtime
     image: ${AIRFLOW_IMAGE}
     container_name: holiday_airflow_scheduler
+    mem_limit: 2g
     command: scheduler
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       airflow-postgres:
@@ -220,10 +239,12 @@ services:
       - SPARK_SQL_SHUFFLE_PARTITIONS=${SPARK_SQL_SHUFFLE_PARTITIONS:-8}
 
   dbt:
+    <<: *runtime
     image: ${AIRFLOW_IMAGE}
     container_name: holiday_dbt
+    mem_limit: 1g
     working_dir: /opt/holiday/dbt
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -236,12 +257,14 @@ services:
       - DBT_TARGET=postgres
 
   api:
+    <<: *runtime
     image: ${APP_IMAGE}
     container_name: holiday_api
+    mem_limit: 1g
     command: uvicorn src.api.app:app --host 0.0.0.0 --port 8000
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     ports:
-      - "8000:8000"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${FASTAPI_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -256,34 +279,40 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
   dashboard:
+    <<: *runtime
     image: ${APP_IMAGE}
     container_name: holiday_dashboard
+    mem_limit: 1g
     command: streamlit run src/api/dashboard.py --server.address 0.0.0.0 --server.port 8501
-    env_file: .env
+    env_file: ${SERVICE_ENV_FILE:-.env}
     ports:
-      - "8501:8501"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${STREAMLIT_PORT:-8501}:8501"
     depends_on:
       - api
     environment:
       - API_BASE_URL=http://api:8000
 
   prometheus:
-    image: prom/prometheus:latest
+    <<: *runtime
+    image: prom/prometheus:v3.7.3
     container_name: holiday_prometheus
+    mem_limit: 1g
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
     depends_on:
       - api
       - kafka-analytics-consumer
       - alertmanager
 
   alertmanager:
-    image: prom/alertmanager:latest
+    <<: *runtime
+    image: prom/alertmanager:v0.29.0
     container_name: holiday_alertmanager
+    mem_limit: 256m
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -291,11 +320,13 @@ services:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
     ports:
-      - "9093:9093"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
 
   grafana:
-    image: grafana/grafana:latest
+    <<: *runtime
+    image: grafana/grafana:12.3.0
     container_name: holiday_grafana
+    mem_limit: 512m
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -304,19 +335,28 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
     depends_on:
       - prometheus
       - alertmanager
 
   adminer:
-    image: adminer
+    <<: *runtime
+    image: adminer:5.4.1-standalone
     container_name: adminer_ui
-    restart: always
+    mem_limit: 256m
     ports:
-      - "5050:8080"
+      - "${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${ADMINER_PORT:-5050}:8080"
     depends_on:
       - postgres
+
+  cloudflared:
+    <<: *runtime
+    image: cloudflare/cloudflared:2026.8.1
+    container_name: holiday_cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    mem_limit: 256m
+    profiles: ["tunnel"]
 
 volumes:
   pg_data:
