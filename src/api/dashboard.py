@@ -48,8 +48,8 @@ st.markdown(
     """
     <style>
       :root {
-        --ink:#edf9f5; --muted:#8ca9a5; --paper:#06131c; --line:#243b44;
-        --green:#49d6aa; --mint:#71f7c5; --navy:#06131c; --warm:#f4b65d;
+        --ink:#0c2025; --muted:#60716f; --paper:#f4f7f6; --line:#dce6e3;
+        --green:#0d8b70; --mint:#64dfbd; --navy:#071b24; --warm:#f4b65d;
       }
       html {scroll-behavior:smooth;}
       [data-testid="stAppViewContainer"] {background:linear-gradient(180deg,#f7faf9 0,#f2f6f5 100%);}
@@ -137,45 +137,17 @@ st.markdown(
       .flow {padding:17px; border-radius:14px; background:linear-gradient(120deg,#092029,#0b3b3a); color:#eaf5f2; line-height:1.8; text-align:center; margin:1rem 0; box-shadow:0 10px 26px rgba(5,31,36,.1);}
       .flow strong {color:#69d5b9;}
 
-      /* Product dashboard visual system */
-      [data-testid="stAppViewContainer"] {background:radial-gradient(circle at 88% 0,rgba(42,132,123,.13),transparent 28%),linear-gradient(180deg,#06131c 0,#081821 100%); color:#e9f7f3;}
-      [data-testid="stHeader"] {background:#06131cdd; border-bottom:1px solid rgba(255,255,255,.05);}
-      .block-container {max-width:1380px; padding-top:1.1rem;}
-      [data-testid="stSidebar"] {border-right:1px solid #20333b; background:linear-gradient(180deg,#07131a 0%,#0a2229 100%);}
-      [data-testid="stMetric"] {border:1px solid #243b44; border-radius:12px; background:#0b1d27; box-shadow:0 12px 28px rgba(0,0,0,.16);}
-      [data-testid="stMetricLabel"] {color:#789793;}
-      [data-testid="stMetricValue"] {color:#f2fffb;}
-      [data-testid="stVerticalBlockBorderWrapper"] {border-color:#243b44 !important; background:rgba(11,29,39,.78); border-radius:15px;}
-      [data-testid="stPageLink-NavLink"] {border-color:#243b44 !important; background:#0b1d27; color:#dcece8;}
-      .portfolio-hero {grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr); padding:38px 42px; border:1px solid #294750; border-radius:18px; background:radial-gradient(circle at 90% 4%,rgba(113,247,197,.19),transparent 31%),linear-gradient(135deg,#081922 0%,#0b3032 100%); box-shadow:0 24px 60px rgba(0,0,0,.28);}
-      .brand-mark {width:38px; height:38px; border:1px solid #71f7c5; border-radius:0; color:#71f7c5; background:#0a1b23; font:900 .76rem ui-monospace,monospace; letter-spacing:.06em;}
-      .portfolio-hero h1 {font-size:clamp(2.5rem,4vw,4rem);}
-      .command-strip {margin-bottom:2rem; border-color:#243b44; background:#243b44; box-shadow:0 12px 32px rgba(0,0,0,.16);}
-      .command-cell {background:#0b1d27; padding:17px 18px;}
-      .command-cell span {color:#668682;}
-      .command-cell strong {color:#f0fbf7; font-size:1.05rem;}
-      .command-cell strong em {color:#71f7c5; font-style:normal;}
-      .section-heading h2,.page-hero h1 {color:#edf9f5;}
-      .section-heading p,.section-lead,.page-hero p {color:#8ca9a5;}
-      .architecture-shell,.level-card,.card,.stage {border-color:#243b44; background:#0b1d27; box-shadow:0 14px 32px rgba(0,0,0,.14);}
-      .level-card h3,.card h3,.stage h3,.evidence-card h3 {color:#edf9f5;}
-      .level-card p,.card p,.stage p,.evidence-card p {color:#8ca9a5;}
-      .reviewer-note {border-color:#275047; background:linear-gradient(120deg,#0b2929,#0b2028); color:#a9c2bd;}
-      .reviewer-note strong {color:#e9faf5;}
-      .page-hero {border-color:#243b44; border-radius:16px; background:radial-gradient(circle at 95% 0,rgba(113,247,197,.13),transparent 32%),#0b1d27; box-shadow:0 14px 38px rgba(0,0,0,.16);}
-      .notice {color:#e8d5a8; background:#2a2417; border-color:#66532c;}
-      .live-note {color:#bce8db; background:#0c2a28; border-color:#27534b;}
-      .place-panel {border-color:#243b44; background:#0d222c; box-shadow:0 7px 18px rgba(0,0,0,.12);}
-      .muted {color:#8ca9a5;}
-      .dashboard-panel {min-height:290px; padding:22px; border:1px solid #243b44; border-radius:14px; background:#0b1d27; box-shadow:0 14px 32px rgba(0,0,0,.16);}
-      .panel-label {color:#71f7c5; font:800 .65rem ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase;}
-      .dashboard-panel h3 {color:#f1fcf8; margin:.65rem 0 1.1rem; font-size:1.2rem;}
-      .system-row {display:grid; grid-template-columns:12px 1fr auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid #243b44; color:#b8cdc8; font-size:.83rem;}
-      .system-row i {width:7px; height:7px; border-radius:50%; background:#71f7c5; box-shadow:0 0 9px rgba(113,247,197,.7);}
-      .system-row strong {color:#edf9f5; font:800 .65rem ui-monospace,monospace; text-transform:uppercase;}
-      .sidebar-brand-card {margin:.2rem .45rem 1rem; padding:1rem; border:1px solid #294049; background:#0a1d25;}
+      /* Product dashboard components, aligned with the original light theme */
+      .dashboard-panel {min-height:290px; padding:22px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(145deg,#fff,#f4f8f7); box-shadow:0 14px 32px rgba(9,48,47,.07);}
+      .panel-label {color:#087862; font:800 .65rem ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase;}
+      .dashboard-panel h3 {color:#123d3a; margin:.65rem 0 1.1rem; font-size:1.2rem;}
+      .system-row {display:grid; grid-template-columns:12px 1fr auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--line); color:#5f716e; font-size:.83rem;}
+      .system-row i {width:7px; height:7px; border-radius:50%; background:#19a984; box-shadow:0 0 9px rgba(25,169,132,.35);}
+      .system-row strong {color:#087862; font:800 .65rem ui-monospace,monospace; text-transform:uppercase;}
+      .command-cell strong em {color:#087862; font-style:normal;}
+      .sidebar-brand-card {margin:.2rem .45rem 1rem; padding:1rem; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.04);}
       .sidebar-brand-card strong {display:block; color:#f3fcf9; font-size:.9rem;}
-      .sidebar-brand-card span {display:block; margin-top:.28rem; color:#6f918d; font:700 .6rem ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase;}
+      .sidebar-brand-card span {display:block; margin-top:.28rem; color:#8db1aa; font:700 .6rem ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase;}
       @media (max-width:900px) {
         .portfolio-hero {grid-template-columns:1fr; padding:38px;}
         .hero-panel {display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
