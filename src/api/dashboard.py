@@ -75,6 +75,8 @@ st.markdown(
       [data-testid="stImage"] img {height:auto !important; border-radius:14px;}
       [data-testid="stTabs"] [data-baseweb="tab-list"] {gap:7px;}
       [data-testid="stTabs"] [data-baseweb="tab"] {border-radius:10px 10px 0 0; padding:.5rem .9rem;}
+      .portfolio-home-link {position:fixed; z-index:999999; top:12px; left:14px; display:grid; place-items:center; width:40px; height:40px; border:1px solid rgba(100,223,189,.32); border-radius:8px; color:#dff7f0 !important; background:#09262c; box-shadow:0 8px 22px rgba(3,23,28,.2); font-size:1.25rem; font-weight:900; text-decoration:none !important; transition:transform .16s ease,background .16s ease;}
+      .portfolio-home-link:hover {transform:translateY(-1px); background:#0d443f;}
       .portfolio-hero {position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.45fr) minmax(260px,.65fr); gap:34px; padding:52px; border-radius:26px; color:#effaf7; background:radial-gradient(circle at 90% 4%,rgba(100,223,189,.24),transparent 30%),radial-gradient(circle at 3% 98%,rgba(47,120,167,.18),transparent 34%),linear-gradient(135deg,#061720 0%,#093a38 100%); box-shadow:0 24px 60px rgba(5,31,36,.18); margin:.15rem 0 1.1rem;}
       .portfolio-hero:after {content:""; position:absolute; width:330px; height:330px; border:1px solid rgba(255,255,255,.08); border-radius:50%; right:-155px; bottom:-220px;}
       .hero-copy,.hero-panel {position:relative; z-index:1;}
@@ -182,6 +184,11 @@ st.markdown(
       }
     </style>
     """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<a class="portfolio-home-link" href="https://hassansalamb.dev" target="_self" title="Back to hassansalamb.dev" aria-label="Back to hassansalamb.dev">⌂</a>',
     unsafe_allow_html=True,
 )
 
