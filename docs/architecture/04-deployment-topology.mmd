@@ -1,0 +1,47 @@
+%%{init: {"theme":"base", "themeVariables":{"background":"#fbfaf7","primaryColor":"#e8f3ef","primaryTextColor":"#173f3a","primaryBorderColor":"#2c7a6b","lineColor":"#526762","secondaryColor":"#fff0dc","tertiaryColor":"#e8eef8","fontFamily":"Inter, Arial, sans-serif"}}}%%
+flowchart TB
+    visitor["Public portfolio visitor"]
+    maintainer["Maintainer / interviewer"]
+
+    subgraph public_edge[" "]
+        tls["Render TLS + public URL"]
+        public_ui["Streamlit<br/>Portfolio Sample"]
+        evidence[("Recorded Evidence<br/>full-stack screenshots")]
+        sample[("Curated Paris sample")]
+        tls --> public_ui
+        sample --> public_ui
+        evidence --> public_ui
+    end
+
+    subgraph private_platform[" "]
+        gateway["Authenticated Cloudflare<br/>access gateway"]
+        product["Streamlit + FastAPI"]
+        orchestration["Airflow + Spark + dbt"]
+        events["Kafka + analytics consumer"]
+        stores[("PostgreSQL + Neo4j")]
+        operations["Prometheus + Grafana<br/>+ Alertmanager"]
+        backups[("Encrypted off-host backups")]
+
+        gateway --> product
+        gateway --> operations
+        product --> stores
+        orchestration --> stores
+        product --> events
+        events --> stores
+        operations --> product
+        operations --> events
+        stores --> backups
+    end
+
+    visitor --> tls
+    maintainer --> gateway
+    public_ui -.->|"links only when verified live"| gateway
+
+    classDef person fill:#e8eef8,stroke:#4f6fa8,color:#1e3a5f;
+    classDef public fill:#fff0dc,stroke:#d97706,color:#78350f;
+    classDef private fill:#e8f3ef,stroke:#2c7a6b,color:#173f3a;
+    classDef store fill:#f8fafc,stroke:#64748b,color:#1f2937;
+    class visitor,maintainer person;
+    class tls,public_ui public;
+    class gateway,product,orchestration,events,operations private;
+    class evidence,sample,stores,backups store;

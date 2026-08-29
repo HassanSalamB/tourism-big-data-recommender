@@ -1,0 +1,37 @@
+%%{init: {"theme":"base", "themeVariables":{"background":"#fbfaf7","primaryColor":"#e8f3ef","primaryTextColor":"#173f3a","primaryBorderColor":"#2c7a6b","lineColor":"#526762","secondaryColor":"#fff0dc","tertiaryColor":"#e8eef8","fontFamily":"Inter, Arial, sans-serif"}}}%%
+flowchart TB
+    airflow["Airflow DAG<br/>single scheduler · retries · task visibility"]
+
+    source["DATAtourisme<br/>Source Snapshot"] --> download["1 · Download archive"]
+    download --> detect["2 · Detect content changes"]
+    detect --> bronze["3 · Load changed raw records"]
+    bronze --> bronze_db[("PostgreSQL Bronze<br/>raw JSONB + content hash")]
+    bronze_db --> silver["4 · Normalize and validate"]
+    silver --> silver_db[("PostgreSQL Silver<br/>trusted places + taxonomy")]
+    silver --> parquet[("Silver Parquet snapshot")]
+
+    parquet --> spark["5 · Spark city features"]
+    spark --> features[("Feature Parquet output")]
+    silver_db --> gold["6 · Gold H3 summaries"]
+    gold --> gold_db[("PostgreSQL Gold<br/>spatial clusters")]
+    silver_db --> graph_sync["7 · Neo4j synchronization"]
+    graph_sync --> neo4j[("Neo4j<br/>POI · City · Category")]
+    silver_db --> dbt["8 · dbt run + tests"]
+    dbt --> marts[("PostgreSQL / Snowflake<br/>tested analytical marts")]
+
+    airflow -.-> download
+    airflow -.-> detect
+    airflow -.-> silver
+    airflow -.-> spark
+    airflow -.-> gold
+    airflow -.-> graph_sync
+    airflow -.-> dbt
+
+    classDef source fill:#e8eef8,stroke:#4f6fa8,color:#1e3a5f;
+    classDef process fill:#e8f3ef,stroke:#2c7a6b,color:#173f3a;
+    classDef store fill:#fff0dc,stroke:#d97706,color:#78350f;
+    classDef orchestrator fill:#d97706,stroke:#92400e,color:#ffffff,stroke-width:2px;
+    class source source;
+    class download,detect,bronze,silver,spark,gold,graph_sync,dbt process;
+    class bronze_db,silver_db,parquet,features,gold_db,neo4j,marts store;
+    class airflow orchestrator;

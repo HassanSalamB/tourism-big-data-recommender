@@ -1,4 +1,11 @@
+x-app-common: &app-common
+  image: ${APP_IMAGE:-holiday-itinerary:local}
+  build:
+    context: .
+    dockerfile: Dockerfile
+
 x-airflow-common: &airflow-common
+  image: ${AIRFLOW_IMAGE:-holiday-itinerary-airflow:local}
   build:
     context: .
     dockerfile: Dockerfile.airflow
@@ -7,8 +14,8 @@ x-airflow-common: &airflow-common
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     - AIRFLOW__CORE__LOAD_EXAMPLES=false
     - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
-    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-    - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/airflow
+    - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_WEBSERVER_SECRET_KEY:-local-dev-secret}
     - PYTHONPATH=/opt/holiday:/opt/holiday/src
     - NEO4J_URI=bolt://neo4j:7687
     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -41,7 +48,7 @@ x-airflow-common: &airflow-common
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15.14-bookworm
     container_name: postgres_db
     environment:
       - POSTGRES_USER=${DB_USER}
@@ -59,7 +66,7 @@ services:
       start_period: 30s
 
   adminer:
-    image: adminer
+    image: adminer:5.4.1-standalone
     container_name: adminer_ui
     restart: always
     ports:
@@ -68,7 +75,7 @@ services:
       - postgres
 
   neo4j:
-    image: neo4j:5
+    image: neo4j:5.26.12-community
     container_name: neo4j_db
     networks:
       default:
@@ -103,7 +110,7 @@ services:
       - kafka_data:/bitnami/kafka
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: holiday_kafka_ui
     ports:
       - "8090:8080"
@@ -114,7 +121,7 @@ services:
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
 
   kafka-analytics-consumer:
-    image: feb26_bde_int_holiday-api
+    <<: *app-common
     container_name: holiday_kafka_analytics_consumer
     command: python -m src.streaming.analytics_consumer
     env_file: .env
@@ -166,11 +173,11 @@ services:
       - ./data:/opt/holiday/data
 
   airflow-postgres:
-    image: postgres:15
+    image: postgres:15.14-bookworm
     container_name: holiday_airflow_postgres
     environment:
       - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_PASSWORD=${AIRFLOW_DB_PASSWORD:-airflow}
       - POSTGRES_DB=airflow
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
@@ -186,7 +193,7 @@ services:
     entrypoint: /bin/bash
     command:
       - -c
-      - airflow db migrate && airflow users create --username admin --password admin --firstname Local --lastname Admin --role Admin --email admin@example.com || true
+      - airflow db migrate && airflow users create --username ${AIRFLOW_ADMIN_USERNAME:-admin} --password ${AIRFLOW_ADMIN_PASSWORD:-admin} --firstname Local --lastname Admin --role Admin --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com} || true
 
   airflow-webserver:
     <<: *airflow-common
@@ -209,8 +216,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=false
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=local-dev-secret
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_WEBSERVER_SECRET_KEY:-local-dev-secret}
       - PYTHONPATH=/opt/holiday:/opt/holiday/src
       - NEO4J_URI=bolt://neo4j:7687
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -226,7 +233,7 @@ services:
       - while true; do dbt run --profiles-dir . && dbt test --profiles-dir . || true; sleep 900; done
 
   api:
-    build: .
+    <<: *app-common
     container_name: holiday_api
     command: uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
@@ -250,7 +257,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
   dashboard:
-    build: .
+    <<: *app-common
     container_name: holiday_dashboard
     command: streamlit run src/api/dashboard.py --server.address 0.0.0.0 --server.port 8501
     env_file: .env
@@ -265,7 +272,7 @@ services:
       - API_BASE_URL=http://api:8000
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.7.3
     container_name: holiday_prometheus
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -279,7 +286,7 @@ services:
       - alertmanager
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.29.0
     container_name: holiday_alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -291,11 +298,11 @@ services:
       - "9093:9093"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.3.0
     container_name: holiday_grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

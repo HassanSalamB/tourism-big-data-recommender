@@ -1,4 +1,4 @@
-# Proxmox deployment runbook
+# Proxmox Deployment Runbook
 
 This runbook deploys the complete tourism platform to one Ubuntu VM on a Proxmox host. It prepares a future deployment; it does not mean a Proxmox server or backend is currently live.
 

@@ -33,9 +33,9 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCREENSHOTS = PROJECT_ROOT / "artifacts" / "screenshots"
-ARCHITECTURE_HERO = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-architecture.png"
-LEVELS_OVERVIEW = PROJECT_ROOT / "docs" / "assets" / "holiday-platform-three-levels.png"
-PROCESSING_ARCHITECTURE = PROJECT_ROOT / "docs" / "assets" / "level-2-spark-dbt-architecture.svg"
+ARCHITECTURE_HERO = PROJECT_ROOT / "docs" / "architecture" / "02-data-pipeline.png"
+LEVELS_OVERVIEW = PROJECT_ROOT / "docs" / "architecture" / "03-itinerary-request.png"
+PROCESSING_ARCHITECTURE = PROJECT_ROOT / "docs" / "architecture" / "02-data-pipeline.svg"
 REPOSITORY_URL = "https://github.com/HassanSalamB/tourism-big-data-recommender"
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PORTFOLIO_DEMO_MODE = os.getenv("PORTFOLIO_DEMO_MODE", "false").lower() in {"1", "true", "yes"}
@@ -308,7 +308,7 @@ def home_page() -> None:
         """
         <div class="proof-grid">
           <article class="proof-card"><small>01 · Govern</small><h3>Trusted tourism data</h3><p>Airflow ingestion, change detection and Bronze–Silver–Gold transformations preserve source history while creating usable place and city models.</p></article>
-          <article class="proof-card"><small>02 · Decide</small><h3>Explainable trip planning</h3><p>The live planner combines interests, place categories, weather context and graph relationships to produce an itinerary a reviewer can inspect.</p></article>
+          <article class="proof-card"><small>02 · Decide</small><h3>Explainable trip planning</h3><p>The live planner combines interest filtering, geographic day grouping, weather context and graph relationships to produce an itinerary a reviewer can inspect.</p></article>
           <article class="proof-card"><small>03 · Operate</small><h3>Production evidence</h3><p>Architecture, pipeline runs, API behavior, events, metrics and runbooks show how the product is delivered and monitored beyond the interface.</p></article>
         </div>
         """,
@@ -318,7 +318,7 @@ def home_page() -> None:
     section_heading(
         "System architecture",
         "One platform, from raw feed to monitored product",
-        "The overview connects orchestration, medallion storage, Spark processing, graph enrichment, serving, events and observability. Open the detailed view for the dbt branch and level-by-level design.",
+        "The overview connects orchestration, medallion storage, ordered Spark and dbt processing, graph enrichment, serving, events and observability.",
     )
     with st.container(border=True):
         st.image(str(ARCHITECTURE_HERO), width="stretch")
@@ -561,7 +561,7 @@ def pipeline_page() -> None:
     backend_status_notice()
     st.markdown('<div class="flow"><strong>DATATOURISME</strong> → SHA-256 CDC → <strong>BRONZE</strong> → <strong>SILVER</strong> → SPARK / dbt / H3 / NEO4J</div>', unsafe_allow_html=True)
     st.subheader("Processing and analytics architecture")
-    st.write("Spark and dbt branch from the trusted Silver layer, solve different transformation problems, and converge in the Gold decision layer.")
+    st.write("Spark and dbt perform complementary work inside the Airflow-controlled order: Spark computes trusted features and dbt validates reusable analytical marts.")
     with st.container(border=True):
         st.image(str(PROCESSING_ARCHITECTURE), width="stretch")
     left, right = st.columns(2)

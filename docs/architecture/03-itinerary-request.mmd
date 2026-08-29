@@ -1,0 +1,33 @@
+%%{init: {"theme":"base", "themeVariables":{"background":"#fbfaf7","primaryColor":"#e8f3ef","primaryTextColor":"#173f3a","primaryBorderColor":"#2c7a6b","lineColor":"#526762","secondaryColor":"#fff0dc","tertiaryColor":"#e8eef8","fontFamily":"Inter, Arial, sans-serif"}}}%%
+flowchart TB
+    traveller["Traveller intent<br/>destination · days · pace · interests"] --> streamlit["Streamlit<br/>product interface"]
+    streamlit --> fastapi["FastAPI<br/>validated planning interface"]
+
+    silver[("Trusted Places<br/>PostgreSQL Silver")] --> candidates["Load destination candidates"]
+    fastapi --> candidates
+    candidates --> interests["Apply Interest eligibility"]
+    interests --> grouping["KMeans geographic<br/>Day Plan grouping"]
+    grouping --> schedule["Order nearby stops<br/>fixed demonstration times"]
+    schedule --> enrich["Attach Related Places"]
+    neo4j[("Neo4j<br/>shared-category graph")] --> enrich
+    enrich --> response["Explainable Itinerary"]
+    response --> streamlit
+
+    weather["Open-Meteo"] --> quality["Weather suitability<br/>and quality signals"]
+    response --> quality
+    response --> events["Kafka<br/>itinerary_requests"]
+    weather --> weather_events["Kafka<br/>weather_snapshots"]
+    events --> consumer["Analytics consumer"]
+    weather_events --> consumer
+    consumer --> analytics[("PostgreSQL<br/>product events")]
+    quality --> metrics["Prometheus metrics"]
+    fastapi --> metrics
+
+    classDef user fill:#e8eef8,stroke:#4f6fa8,color:#1e3a5f;
+    classDef product fill:#d97706,stroke:#92400e,color:#ffffff,stroke-width:2px;
+    classDef process fill:#e8f3ef,stroke:#2c7a6b,color:#173f3a;
+    classDef store fill:#fff0dc,stroke:#d97706,color:#78350f;
+    class traveller user;
+    class streamlit,fastapi,response product;
+    class candidates,interests,grouping,schedule,enrich,quality,consumer,metrics process;
+    class silver,neo4j,events,weather_events,analytics,weather store;

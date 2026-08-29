@@ -9,4 +9,4 @@ scripts/proxmox/deploy.sh --check-only
 scripts/proxmox/deploy.sh
 ```
 
-Do not commit `distribution/.env`. See [the Proxmox deployment runbook](../docs/PROXMOX_DEPLOYMENT.md) for VM preparation, secure publication, backups, and updates.
+Do not commit `distribution/.env`. See [the Proxmox deployment runbook](../docs/operations/PROXMOX_DEPLOYMENT.md) for VM preparation, secure publication, backups, and updates.

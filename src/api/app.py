@@ -710,6 +710,24 @@ def generate_itinerary(request: ItineraryRequest):
             status_code=404, detail=f"City '{request.city}' was not found."
         )
 
+    df["category_match_count"] = df["categories"].map(
+        lambda categories: _category_match_count(
+            list(categories or []), preferred_categories
+        )
+    )
+    if preferred_categories:
+        df = df[df["category_match_count"] > 0].copy()
+        if df.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "No places in this city match the selected interests: "
+                    f"{', '.join(preferred_categories)}."
+                ),
+            )
+
+    # Build geographic day groups from eligible candidates. Clustering the
+    # entire city before applying interests can leave empty days afterward.
     cluster_count = min(request.days, len(df))
     if cluster_count > 1:
         coords = df[["lat", "lon"]].astype(float).values
@@ -727,21 +745,6 @@ def generate_itinerary(request: ItineraryRequest):
     else:
         df["day_assignment"] = 0
         df["distance_to_day_center"] = 0
-    df["category_match_count"] = df["categories"].map(
-        lambda categories: _category_match_count(
-            list(categories or []), preferred_categories
-        )
-    )
-    if preferred_categories:
-        df = df[df["category_match_count"] > 0].copy()
-        if df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    "No places in this city match the selected interests: "
-                    f"{', '.join(preferred_categories)}."
-                ),
-            )
 
     selected_rows_by_day = []
     for day_index in range(cluster_count):

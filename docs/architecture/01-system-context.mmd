@@ -1,0 +1,33 @@
+%%{init: {"theme":"base", "themeVariables":{"background":"#fbfaf7","primaryColor":"#e8f3ef","primaryTextColor":"#173f3a","primaryBorderColor":"#2c7a6b","lineColor":"#526762","secondaryColor":"#fff0dc","tertiaryColor":"#e8eef8","fontFamily":"Inter, Arial, sans-serif"}}}%%
+flowchart TB
+    subgraph people[" "]
+        direction LR
+        traveller["Traveller<br/>plans destination days"]
+        reviewer["Recruiter / interviewer<br/>evaluates engineering evidence"]
+        operator["Platform operator<br/>runs and monitors the data product"]
+    end
+
+    platform["Holiday Itinerary<br/>Tourism Data Platform"]
+
+    subgraph external[" "]
+        direction LR
+        tourism["DATAtourisme<br/>tourism-supply snapshots"]
+        weather["Open-Meteo<br/>current weather context"]
+        render["Render<br/>public Portfolio Sample"]
+        proxmox["Proxmox<br/>private full platform"]
+    end
+
+    traveller -->|"requests an explainable itinerary"| platform
+    reviewer -->|"inspects product and recorded evidence"| platform
+    operator -->|"orchestrates, observes and recovers"| platform
+    tourism -->|"Points of Interest"| platform
+    weather -->|"weather context"| platform
+    render -->|"hosts accessible sample"| platform
+    proxmox -->|"hosts stateful modules"| platform
+
+    classDef person fill:#e8f3ef,stroke:#2c7a6b,color:#173f3a,stroke-width:2px;
+    classDef product fill:#d97706,stroke:#92400e,color:#ffffff,stroke-width:3px;
+    classDef external fill:#f8fafc,stroke:#64748b,color:#1f2937,stroke-width:1.5px;
+    class traveller,reviewer,operator person;
+    class platform product;
+    class tourism,weather,render,proxmox external;
