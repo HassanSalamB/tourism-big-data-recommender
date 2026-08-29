@@ -2,7 +2,7 @@
 
 An end-to-end tourism data product that turns DATAtourisme snapshots into trusted Points of Interest, explainable multi-day itineraries, analytical features, graph relationships, product events, and operational evidence.
 
-**[Open the public portfolio](https://holiday-itinerary-platform.onrender.com/)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Interview guide](docs/INTERVIEW_GUIDE.md)**
+**[Open the live application](https://holiday.hassansalamb.dev/)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Roadmap](docs/ROADMAP.md)**
 
 ![Holiday Itinerary data pipeline](docs/architecture/02-data-pipeline.png)
 
@@ -106,7 +106,6 @@ Durable trade-offs are recorded in [`docs/adr`](docs/adr).
 │   ├── architecture/             Editable diagrams plus PNG/SVG renders
 │   ├── operations/               Proxmox and Kubernetes guidance
 │   ├── ARCHITECTURE.md            Technical architecture walkthrough
-│   ├── INTERVIEW_GUIDE.md         Interview narrative and technical Q&A
 │   └── ROADMAP.md                 Prioritized product/platform improvements
 ├── monitoring/                   Prometheus, Grafana, and Alertmanager config
 ├── scripts/proxmox/              Deployment, health, and backup automation
@@ -237,12 +236,18 @@ See the [Proxmox runbook](docs/operations/PROXMOX_DEPLOYMENT.md), [release distr
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Interview preparation](docs/INTERVIEW_GUIDE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Proxmox deployment](docs/operations/PROXMOX_DEPLOYMENT.md)
 - [Kubernetes guidance](docs/operations/KUBERNETES.md)
 - [Release distribution](distribution/README.md)
 - [Snowflake Terraform example](terraform/README.md)
+
+## Branch workflow
+
+- `dev` is the integration branch for active development.
+- Changes are tested on `dev` before being merged into `main`.
+- `main` is the release branch and must remain deployable.
+- Only `main` and `dev` are maintained as long-lived branches.
 
 ## License and attribution
 

@@ -3,7 +3,7 @@ flowchart TB
     subgraph people[" "]
         direction LR
         traveller["Traveller<br/>plans destination days"]
-        reviewer["Recruiter / interviewer<br/>evaluates engineering evidence"]
+        reviewer["Technical evaluator<br/>reviews engineering evidence"]
         operator["Platform operator<br/>runs and monitors the data product"]
     end
 
@@ -18,7 +18,7 @@ flowchart TB
     end
 
     traveller -->|"requests an explainable itinerary"| platform
-    reviewer -->|"inspects product and recorded evidence"| platform
+    reviewer -->|"reviews product and recorded evidence"| platform
     operator -->|"orchestrates, observes and recovers"| platform
     tourism -->|"Points of Interest"| platform
     weather -->|"weather context"| platform
