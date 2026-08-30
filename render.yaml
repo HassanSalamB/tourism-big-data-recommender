@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    branch: dev
+    branch: main
     buildCommand: pip install -r requirements-portfolio.txt
     startCommand: streamlit run src/api/dashboard.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     healthCheckPath: /_stcore/health

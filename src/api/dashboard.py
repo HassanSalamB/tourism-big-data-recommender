@@ -468,7 +468,7 @@ def itinerary_page() -> None:
         "Live product",
         "Build a destination itinerary",
         "Choose a city, trip length and interests. The product combines trusted place data, weather context and preference-aware recommendations into an explorable plan.",
-        "Interactive on Render",
+        "Interactive live demo",
     )
     mode_notice()
     try:
@@ -520,7 +520,7 @@ def itinerary_page() -> None:
                 for day in itinerary:
                     st.markdown(f"### Day {day['day']}")
                     if not day["places"]:
-                        st.caption("No additional places are available for this day in the selected sample.")
+                        st.caption("No additional places match the selected interests for this day.")
                     day_frame = pd.DataFrame(day["places"])
                     if not day_frame.empty:
                         st.caption(f"Day {day['day']} route map · zoom or open fullscreen to explore")
