@@ -16,6 +16,11 @@ except ImportError:
     from dashboard_demo import WEATHER, demo_categories, demo_cities, demo_itinerary, demo_places, demo_summary
 
 try:
+    from src.api.map_view import render_leaflet_map
+except ImportError:
+    from map_view import render_leaflet_map
+
+try:
     from src.api.service_registry import (
         backend_status_message,
         load_backend_status,
@@ -524,7 +529,7 @@ def itinerary_page() -> None:
                     day_frame = pd.DataFrame(day["places"])
                     if not day_frame.empty:
                         st.caption(f"Day {day['day']} route map · zoom or open fullscreen to explore")
-                        st.map(day_frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
+                        render_leaflet_map(day["places"], key=f"itinerary-map-{city}-{day['day']}")
                     for place in day["places"]:
                         st.markdown(
                             f'<div class="place-panel"><strong>{place["start_time"]}–{place["end_time"]} · {place["name"]}</strong><div class="muted">{", ".join(place["categories"][:3])}</div><div>{place.get("address", "")}</div><div class="muted">Related: {", ".join(place["recommendations"])}</div></div>',
@@ -540,7 +545,7 @@ def itinerary_page() -> None:
             else:
                 st.subheader(f"Explore {city} on the map")
                 st.caption("Zoom, pan, or open fullscreen; the table below provides the corresponding place details.")
-                st.map(frame.rename(columns={"lat": "latitude", "lon": "longitude"}))
+                render_leaflet_map(places, key=f"places-map-{city}")
                 st.dataframe(frame[["name", "city", "address", "categories", "website"]], width="stretch", hide_index=True)
         else:
             city_frame = pd.DataFrame(cities)

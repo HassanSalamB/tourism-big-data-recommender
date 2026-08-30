@@ -23,3 +23,5 @@ fastapi
 uvicorn
 scikit-learn
 streamlit
+folium
+streamlit-folium
