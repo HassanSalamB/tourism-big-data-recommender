@@ -82,6 +82,7 @@ st.markdown(
       [data-testid="stTabs"] [data-baseweb="tab"] {border-radius:10px 10px 0 0; padding:.5rem .9rem;}
       .portfolio-home-link {position:fixed; z-index:999999; top:12px; left:14px; display:grid; place-items:center; width:40px; height:40px; border:1px solid rgba(100,223,189,.32); border-radius:8px; color:#dff7f0 !important; background:#09262c; box-shadow:0 8px 22px rgba(3,23,28,.2); font-size:1.25rem; font-weight:900; text-decoration:none !important; transition:transform .16s ease,background .16s ease;}
       .portfolio-home-link:hover {transform:translateY(-1px); background:#0d443f;}
+      .portfolio-home-link img {display:block; width:31px; height:31px; border-radius:7px;}
       .portfolio-hero {position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.45fr) minmax(260px,.65fr); gap:34px; padding:52px; border-radius:26px; color:#effaf7; background:radial-gradient(circle at 90% 4%,rgba(100,223,189,.24),transparent 30%),radial-gradient(circle at 3% 98%,rgba(47,120,167,.18),transparent 34%),linear-gradient(135deg,#061720 0%,#093a38 100%); box-shadow:0 24px 60px rgba(5,31,36,.18); margin:.15rem 0 1.1rem;}
       .portfolio-hero:after {content:""; position:absolute; width:330px; height:330px; border:1px solid rgba(255,255,255,.08); border-radius:50%; right:-155px; bottom:-220px;}
       .hero-copy,.hero-panel {position:relative; z-index:1;}
@@ -193,7 +194,7 @@ st.markdown(
 )
 
 st.markdown(
-    '<a class="portfolio-home-link" href="https://hassansalamb.dev" target="_self" title="Back to hassansalamb.dev" aria-label="Back to hassansalamb.dev">⌂</a>',
+    '<a class="portfolio-home-link" href="https://hassansalamb.dev" target="_self" title="Back to hassansalamb.dev" aria-label="Back to hassansalamb.dev"><img src="https://hassansalamb.dev/favicon.svg?v=2" alt="" aria-hidden="true"></a>',
     unsafe_allow_html=True,
 )
 
@@ -657,8 +658,8 @@ def runbook_page() -> None:
     st.link_button("Read the full repository guide", REPOSITORY_URL)
 
 
-HOME_PAGE = st.Page(home_page, title="Project Home", icon="🏠", default=True)
-APP_PAGE = st.Page(itinerary_page, title="Itinerary App", icon="🧭")
+HOME_PAGE = st.Page(home_page, title="Project Home", icon="🏠")
+APP_PAGE = st.Page(itinerary_page, title="Itinerary App", icon="🧭", default=True)
 ARCHITECTURE_PAGE = st.Page(architecture_page, title="Architecture Details", icon="🧱")
 PIPELINE_PAGE = st.Page(pipeline_page, title="Pipeline & Storage", icon="🔄")
 SERVING_PAGE = st.Page(serving_page, title="Serving & Graph", icon="🔌")
@@ -672,8 +673,8 @@ st.sidebar.markdown(
 
 navigation = st.navigation(
     {
-        "Start": [HOME_PAGE],
-        "Explore": [APP_PAGE, ARCHITECTURE_PAGE, PIPELINE_PAGE, SERVING_PAGE, OBSERVABILITY_PAGE, RUNBOOK_PAGE],
+        "Plan": [APP_PAGE],
+        "Details": [HOME_PAGE, ARCHITECTURE_PAGE, PIPELINE_PAGE, SERVING_PAGE, OBSERVABILITY_PAGE, RUNBOOK_PAGE],
     }
 )
 navigation.run()
