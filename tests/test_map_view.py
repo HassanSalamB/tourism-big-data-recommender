@@ -14,8 +14,10 @@ class MapViewTests(unittest.TestCase):
         rendered = route_map.get_root().render() if route_map is not None else ""
 
         self.assertIn("leaflet", rendered.lower())
+        self.assertIn("tile.openstreetmap.org", rendered)
         self.assertIn("First", rendered)
         self.assertIn("Second", rendered)
+        self.assertNotIn("cartodb", rendered.lower())
         self.assertNotIn("deck.gl", rendered.lower())
 
     def test_map_rejects_places_without_coordinates(self) -> None:

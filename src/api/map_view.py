@@ -10,6 +10,9 @@ import streamlit as st
 from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 
+OPENSTREETMAP_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+OPENSTREETMAP_ATTRIBUTION = "&copy; OpenStreetMap contributors"
+
 
 def build_leaflet_map(places: Iterable[dict[str, Any]]) -> folium.Map | None:
     """Build an OpenStreetMap-backed route map without requiring WebGL."""
@@ -24,10 +27,22 @@ def build_leaflet_map(places: Iterable[dict[str, Any]]) -> folium.Map | None:
     ]
     route_map = folium.Map(
         location=center,
-        tiles="CartoDB positron",
+        tiles=OPENSTREETMAP_TILES,
+        attr=OPENSTREETMAP_ATTRIBUTION,
         zoom_start=13,
         control_scale=True,
         zoom_control=True,
+    )
+    route_map.get_root().header.add_child(
+        folium.Element(
+            """
+            <style>
+              .leaflet-tile-pane {
+                filter: grayscale(0.45) saturate(0.75) brightness(1.08);
+              }
+            </style>
+            """
+        )
     )
     Fullscreen(position="topright", title="Open fullscreen", title_cancel="Exit fullscreen").add_to(route_map)
 
